@@ -486,8 +486,9 @@
     const pinch = {
       active: false,
       startedAt: 0,
-      pressThreshold: 0.055,
-      releaseThreshold: 0.09
+      pressThreshold: 0.62,
+      releaseThreshold: 0.82,
+      lastRatio: 1
     };
     const twoHandZoom = {
       active: false,
@@ -623,7 +624,6 @@
 
     function onHandResults(results) {
       handCtx.clearRect(0, 0, handCanvas.width, handCanvas.height);
-      lastHandAt = performance.now();
 
       const hands = (results.multiHandLandmarks || []).slice(0, 2).map((landmarks) =>
         landmarks.map((point) => ({ x: 1 - point.x, y: point.y, z: point.z }))
@@ -632,12 +632,20 @@
       drawHands(hands);
 
       if (!hands.length) {
+        if (pinch.active) {
+          pinch.active = false;
+          cursor.classList.remove('pinched');
+          releaseGrabbedNode();
+        }
+        if (pointer.source === 'hand') {
+          pointer.source = 'mouse';
+        }
         inputState.textContent = cameraRunning ? 'Camera active, no hand' : 'Mouse fallback';
         gestureState.textContent = 'Pointer hover';
         return;
       }
 
-      inputState.textContent = `${hands.length} hand${hands.length > 1 ? 's' : ''} tracked`;
+      lastHandAt = performance.now();
 
       const primary = hands[0];
       const index = primary[8];
@@ -645,10 +653,10 @@
       setPointer(index.x, index.y, 'hand');
       updateRaycastTarget('Hand hover');
 
-      const pinchDistance = distance2D(index, thumb);
-      const isPinched = pinch.active
-        ? pinchDistance < pinch.releaseThreshold
-        : pinchDistance < pinch.pressThreshold;
+      const primaryPinch = getPinchSample(primary);
+      pinch.lastRatio = primaryPinch.ratio;
+      inputState.textContent = `${hands.length} hand${hands.length > 1 ? 's' : ''} tracked · pinch ${primaryPinch.ratio.toFixed(2)}`;
+      const isPinched = isPinchDetected(primaryPinch, pinch.active);
 
       if (hands.length === 2 && isPinched && isHandPinched(hands[1])) {
         handleTwoHandZoom(hands);
@@ -680,9 +688,9 @@
 
       if (pinch.active && grabbedNode) {
         moveGrabbedNode();
-        gestureState.textContent = 'Pinch grab';
+        gestureState.textContent = `Pinch grab ${pinch.lastRatio.toFixed(2)}`;
       } else {
-        gestureState.textContent = Math.hypot(pointer.vx, pointer.vy) > 0.08 ? 'Swipe spin' : 'Pointer hover';
+        gestureState.textContent = Math.hypot(pointer.vx, pointer.vy) > 0.08 ? 'Swipe spin' : `Pointer hover ${pinch.lastRatio.toFixed(2)}`;
         if (Math.hypot(pointer.vx, pointer.vy) > 0.08) {
           const current = Graph.cameraPosition();
           Graph.cameraPosition({
@@ -939,7 +947,24 @@
     }
 
     function isHandPinched(hand) {
-      return distance2D(hand[8], hand[4]) < (pinch.active ? pinch.releaseThreshold : pinch.pressThreshold);
+      return isPinchDetected(getPinchSample(hand), false);
+    }
+
+    function getPinchSample(hand) {
+      const tipDistance = distance2D(hand[8], hand[4]);
+      const palmDepth = distance2D(hand[0], hand[9]);
+      const palmWidth = distance2D(hand[5], hand[17]);
+      const indexLength = distance2D(hand[5], hand[8]);
+      const scale = Math.max(palmDepth, palmWidth * 1.35, indexLength * 0.92, 0.001);
+      return {
+        distance: tipDistance,
+        scale,
+        ratio: tipDistance / scale
+      };
+    }
+
+    function isPinchDetected(sample, alreadyActive) {
+      return sample.ratio < (alreadyActive ? pinch.releaseThreshold : pinch.pressThreshold);
     }
 
     function distance2D(a, b) {
