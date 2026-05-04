@@ -1,0 +1,1074 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <meta name="theme-color" content="#030509">
+  <title>Spatial Gesture Graph | Bles Software</title>
+  <meta name="description" content="An open-source Minority Report-style spatial knowledge graph controlled by webcam hand gestures with Three.js and MediaPipe.">
+  <link rel="icon" href="data:,">
+  <style>
+    :root {
+      color-scheme: dark;
+      --bg: #030509;
+      --ink: #f7f9ff;
+      --muted: rgba(247, 249, 255, 0.66);
+      --soft: rgba(247, 249, 255, 0.48);
+      --line: rgba(255, 255, 255, 0.15);
+      --panel: rgba(9, 12, 19, 0.7);
+      --cyan: #72d7ff;
+      --green: #8ef0ba;
+      --coral: #ff9a84;
+      --violet: #b7a0ff;
+      --gold: #f6d36f;
+    }
+
+    * {
+      box-sizing: border-box;
+    }
+
+    html,
+    body {
+      width: 100%;
+      height: 100%;
+      margin: 0;
+      overflow: hidden;
+      background: var(--bg);
+      color: var(--ink);
+      font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+      letter-spacing: 0;
+      -webkit-font-smoothing: antialiased;
+      touch-action: none;
+      overscroll-behavior: none;
+      user-select: none;
+    }
+
+    #stage,
+    #hands {
+      position: fixed;
+      inset: 0;
+      width: 100%;
+      height: 100%;
+      display: block;
+    }
+
+    #stage {
+      z-index: 0;
+      background:
+        radial-gradient(circle at 50% 40%, rgba(44, 87, 117, 0.2), transparent 38%),
+        linear-gradient(180deg, #05070c, #030509 58%, #020306);
+    }
+
+    #hands {
+      z-index: 2;
+      pointer-events: none;
+      opacity: 0.78;
+    }
+
+    video {
+      position: fixed;
+      right: 18px;
+      bottom: 18px;
+      width: 176px;
+      height: 99px;
+      object-fit: cover;
+      transform: scaleX(-1);
+      border: 1px solid rgba(255, 255, 255, 0.18);
+      border-radius: 8px;
+      opacity: 0.34;
+      z-index: 5;
+      background: #080b12;
+    }
+
+    .ui {
+      position: fixed;
+      inset: 0;
+      z-index: 4;
+      pointer-events: none;
+      padding: clamp(14px, 3vw, 30px);
+      display: grid;
+      grid-template-rows: auto 1fr auto;
+      gap: 18px;
+    }
+
+    .topbar,
+    .debug,
+    .node-panel,
+    .gesture-map {
+      pointer-events: auto;
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      background:
+        linear-gradient(180deg, rgba(255, 255, 255, 0.08), rgba(255, 255, 255, 0.025)),
+        var(--panel);
+      box-shadow:
+        inset 0 1px 0 rgba(255, 255, 255, 0.12),
+        0 24px 90px rgba(0, 0, 0, 0.36);
+      backdrop-filter: blur(18px) saturate(130%);
+    }
+
+    .topbar {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 14px;
+      min-height: 50px;
+      padding: 10px 12px;
+    }
+
+    .brand {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      min-width: 0;
+    }
+
+    .mark {
+      width: 34px;
+      height: 34px;
+      flex: 0 0 auto;
+      border-radius: 8px;
+      border: 1px solid rgba(114, 215, 255, 0.42);
+      background:
+        linear-gradient(135deg, rgba(114, 215, 255, 0.22), rgba(142, 240, 186, 0.1)),
+        rgba(255, 255, 255, 0.06);
+      box-shadow: inset 0 0 18px rgba(114, 215, 255, 0.18);
+    }
+
+    h1 {
+      margin: 0;
+      font-size: clamp(1rem, 2vw, 1.22rem);
+      line-height: 1.1;
+    }
+
+    .subtitle {
+      display: block;
+      margin-top: 3px;
+      color: var(--muted);
+      font-size: 0.82rem;
+    }
+
+    .actions {
+      display: flex;
+      align-items: center;
+      gap: 9px;
+      flex-wrap: wrap;
+      justify-content: flex-end;
+    }
+
+    button,
+    .link-button {
+      min-height: 38px;
+      padding: 8px 11px;
+      border: 1px solid rgba(255, 255, 255, 0.18);
+      border-radius: 8px;
+      color: var(--ink);
+      background: rgba(255, 255, 255, 0.07);
+      font: inherit;
+      font-size: 0.86rem;
+      font-weight: 760;
+      text-decoration: none;
+      cursor: pointer;
+    }
+
+    button.primary {
+      border-color: rgba(114, 215, 255, 0.5);
+      background:
+        linear-gradient(135deg, rgba(114, 215, 255, 0.22), rgba(142, 240, 186, 0.13)),
+        rgba(255, 255, 255, 0.08);
+    }
+
+    button:disabled {
+      cursor: not-allowed;
+      opacity: 0.55;
+    }
+
+    .middle {
+      display: flex;
+      align-items: flex-start;
+      justify-content: space-between;
+      gap: 16px;
+      min-height: 0;
+    }
+
+    .debug,
+    .gesture-map {
+      width: min(315px, calc(100vw - 28px));
+      padding: 14px;
+    }
+
+    .debug {
+      align-self: flex-start;
+    }
+
+    .gesture-map {
+      align-self: flex-end;
+    }
+
+    .panel-title {
+      margin: 0 0 11px;
+      color: rgba(247, 249, 255, 0.76);
+      font-size: 0.75rem;
+      font-weight: 860;
+      text-transform: uppercase;
+    }
+
+    .state-grid {
+      display: grid;
+      gap: 8px;
+    }
+
+    .state-row,
+    .gesture-row {
+      display: grid;
+      grid-template-columns: 104px 1fr;
+      gap: 10px;
+      align-items: start;
+      min-height: 34px;
+      padding: 8px;
+      border: 1px solid rgba(255, 255, 255, 0.1);
+      border-radius: 8px;
+      background: rgba(255, 255, 255, 0.045);
+      color: var(--muted);
+      font-size: 0.8rem;
+      line-height: 1.32;
+    }
+
+    .state-row strong,
+    .gesture-row strong {
+      color: var(--ink);
+      font-size: 0.78rem;
+      text-transform: uppercase;
+    }
+
+    .node-panel {
+      width: min(420px, calc(100vw - 28px));
+      align-self: flex-end;
+      justify-self: end;
+      padding: 16px;
+    }
+
+    .node-panel h2 {
+      margin: 0;
+      font-size: clamp(1.45rem, 3vw, 2.3rem);
+      line-height: 1.02;
+    }
+
+    .node-panel p {
+      margin: 12px 0 0;
+      color: var(--muted);
+      line-height: 1.5;
+    }
+
+    .node-meta {
+      display: grid;
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+      gap: 8px;
+      margin-top: 14px;
+    }
+
+    .metric {
+      min-width: 0;
+      border: 1px solid rgba(255, 255, 255, 0.1);
+      border-radius: 8px;
+      padding: 9px;
+      background: rgba(255, 255, 255, 0.045);
+    }
+
+    .metric span {
+      display: block;
+      color: var(--soft);
+      font-size: 0.66rem;
+      text-transform: uppercase;
+      font-weight: 820;
+    }
+
+    .metric strong {
+      display: block;
+      margin-top: 4px;
+      overflow-wrap: anywhere;
+      font-size: 0.88rem;
+    }
+
+    .footer {
+      display: flex;
+      justify-content: space-between;
+      align-items: end;
+      gap: 16px;
+      color: var(--muted);
+      font-size: 0.82rem;
+    }
+
+    .cursor {
+      position: fixed;
+      left: 50%;
+      top: 50%;
+      width: 34px;
+      height: 34px;
+      border: 1px solid rgba(114, 215, 255, 0.95);
+      border-radius: 50%;
+      transform: translate(-50%, -50%);
+      z-index: 6;
+      pointer-events: none;
+      box-shadow:
+        0 0 18px rgba(114, 215, 255, 0.45),
+        inset 0 0 12px rgba(114, 215, 255, 0.28);
+    }
+
+    .cursor.pinched {
+      width: 22px;
+      height: 22px;
+      border-color: rgba(142, 240, 186, 0.95);
+      box-shadow:
+        0 0 22px rgba(142, 240, 186, 0.6),
+        inset 0 0 10px rgba(142, 240, 186, 0.35);
+    }
+
+    .notice {
+      max-width: 640px;
+    }
+
+    @media (max-width: 980px) {
+      .middle {
+        align-items: stretch;
+        flex-direction: column;
+      }
+
+      .debug,
+      .gesture-map,
+      .node-panel {
+        width: min(100%, 520px);
+      }
+
+      .gesture-map {
+        display: none;
+      }
+
+      .node-panel {
+        align-self: flex-start;
+      }
+
+      video {
+        width: 134px;
+        height: 76px;
+      }
+    }
+
+    @media (max-width: 680px) {
+      .ui {
+        padding: 12px;
+        gap: 12px;
+      }
+
+      .topbar,
+      .footer {
+        align-items: flex-start;
+        flex-direction: column;
+      }
+
+      .actions {
+        justify-content: flex-start;
+      }
+
+      .debug {
+        display: none;
+      }
+
+      .node-meta {
+        grid-template-columns: 1fr;
+      }
+
+      video {
+        display: none;
+      }
+    }
+  </style>
+  <script src="https://cdn.jsdelivr.net/npm/@mediapipe/camera_utils/camera_utils.js" crossorigin="anonymous"></script>
+  <script src="https://cdn.jsdelivr.net/npm/@mediapipe/drawing_utils/drawing_utils.js" crossorigin="anonymous"></script>
+  <script src="https://cdn.jsdelivr.net/npm/@mediapipe/hands/hands.js" crossorigin="anonymous"></script>
+  <script type="importmap">
+    {
+      "imports": {
+        "three": "https://cdn.jsdelivr.net/npm/three@0.170.0/build/three.module.js"
+      }
+    }
+  </script>
+</head>
+<body>
+  <canvas id="stage" aria-label="Spatial hand gesture controlled knowledge graph"></canvas>
+  <canvas id="hands" aria-hidden="true"></canvas>
+  <video id="video" autoplay muted playsinline></video>
+  <div class="cursor" id="cursor" aria-hidden="true"></div>
+
+  <div class="ui">
+    <header class="topbar">
+      <div class="brand">
+        <span class="mark" aria-hidden="true"></span>
+        <div>
+          <h1>Spatial Gesture Graph</h1>
+          <span class="subtitle">Open-source Minority Report-style knowledge graph in the browser</span>
+        </div>
+      </div>
+      <div class="actions">
+        <button class="primary" id="startCamera" type="button">Start hand tracking</button>
+        <button id="resetView" type="button">Reset view</button>
+        <a class="link-button" href="https://github.com/stas4000/minority-report-gesture-graph">Source</a>
+      </div>
+    </header>
+
+    <main class="middle">
+      <section class="debug" aria-label="Gesture debug">
+        <h2 class="panel-title">Gesture state</h2>
+        <div class="state-grid">
+          <div class="state-row"><strong>Input</strong><span id="inputState">Mouse fallback</span></div>
+          <div class="state-row"><strong>Gesture</strong><span id="gestureState">Open hand pointer</span></div>
+          <div class="state-row"><strong>Target</strong><span id="targetState">None</span></div>
+          <div class="state-row"><strong>Zoom</strong><span id="zoomState">1.00x</span></div>
+        </div>
+      </section>
+
+      <section class="gesture-map" aria-label="Gesture map">
+        <h2 class="panel-title">Mappings</h2>
+        <div class="state-grid">
+          <div class="gesture-row"><strong>Open hand</strong><span>Move cursor and throw the graph with fast swipes.</span></div>
+          <div class="gesture-row"><strong>Pinch</strong><span>Select, inspect, and hold to grab a node.</span></div>
+          <div class="gesture-row"><strong>Two pinches</strong><span>Pull hands apart to zoom out, push together to zoom in.</span></div>
+          <div class="gesture-row"><strong>Mouse</strong><span>Move, click, drag, and wheel for fallback testing.</span></div>
+        </div>
+      </section>
+
+      <section class="node-panel" aria-live="polite">
+        <h2 id="nodeTitle">Topologies of Thought</h2>
+        <p id="nodeText">Use your hand or mouse to point at a node. Pinch or click to inspect it. Hold the pinch to pull a node through the graph.</p>
+        <div class="node-meta">
+          <div class="metric"><span>Cluster</span><strong id="nodeCluster">Spatial UX</strong></div>
+          <div class="metric"><span>Links</span><strong id="nodeLinks">24</strong></div>
+          <div class="metric"><span>Mode</span><strong id="nodeMode">Ready</strong></div>
+        </div>
+      </section>
+    </main>
+
+    <footer class="footer">
+      <span class="notice">Webcam frames stay local. MediaPipe runs in the browser. The demo also works with mouse fallback.</span>
+      <span>Built by Bles Software for open-source spatial UI experiments.</span>
+    </footer>
+  </div>
+
+  <script type="module">
+    import * as THREE from 'three';
+
+    const canvas = document.getElementById('stage');
+    const handCanvas = document.getElementById('hands');
+    const handCtx = handCanvas.getContext('2d');
+    const video = document.getElementById('video');
+    const cursor = document.getElementById('cursor');
+    const startCameraButton = document.getElementById('startCamera');
+    const resetViewButton = document.getElementById('resetView');
+    const inputState = document.getElementById('inputState');
+    const gestureState = document.getElementById('gestureState');
+    const targetState = document.getElementById('targetState');
+    const zoomState = document.getElementById('zoomState');
+    const nodeTitle = document.getElementById('nodeTitle');
+    const nodeText = document.getElementById('nodeText');
+    const nodeCluster = document.getElementById('nodeCluster');
+    const nodeLinks = document.getElementById('nodeLinks');
+    const nodeMode = document.getElementById('nodeMode');
+
+    const graphData = createGraphData();
+    const nodeMeshes = new Map();
+    const labelSprites = new Map();
+    const nodes = graphData.nodes.map((node, index) => ({
+      ...node,
+      position: fibonacciPoint(index, graphData.nodes.length, 4.8),
+      velocity: new THREE.Vector3(),
+      baseRadius: 0.18 + (node.weight || 1) * 0.035
+    }));
+    const links = graphData.links;
+
+    const pointer = {
+      x: 0,
+      y: 0,
+      lastX: 0,
+      lastY: 0,
+      vx: 0,
+      vy: 0,
+      source: 'mouse'
+    };
+    const pinch = {
+      active: false,
+      startedAt: 0,
+      releaseThreshold: 0.09,
+      pressThreshold: 0.055
+    };
+    const twoHandZoom = {
+      active: false,
+      startSpan: 0,
+      startDistance: 9.2
+    };
+    let hovered = null;
+    let selected = null;
+    let grabbed = null;
+    let cameraDistance = 9.2;
+    let rotationMomentum = new THREE.Vector2(0.08, -0.04);
+    let cameraRunning = false;
+    let cameraController = null;
+    let handsController = null;
+    let lastHandAt = 0;
+
+    const renderer = new THREE.WebGLRenderer({
+      canvas,
+      antialias: true,
+      powerPreference: 'high-performance',
+      preserveDrawingBuffer: true
+    });
+    renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, 1.75));
+    renderer.setSize(window.innerWidth, window.innerHeight);
+    renderer.outputColorSpace = THREE.SRGBColorSpace;
+    renderer.toneMapping = THREE.ACESFilmicToneMapping;
+    renderer.toneMappingExposure = 1.06;
+
+    const scene = new THREE.Scene();
+    scene.background = new THREE.Color(0x030509);
+    const camera = new THREE.PerspectiveCamera(44, window.innerWidth / window.innerHeight, 0.1, 90);
+    camera.position.set(0, 0, cameraDistance);
+
+    const root = new THREE.Group();
+    scene.add(root);
+
+    scene.add(new THREE.AmbientLight(0xbfd7ff, 0.42));
+    const key = new THREE.DirectionalLight(0xffffff, 1.8);
+    key.position.set(5, 6, 4);
+    scene.add(key);
+    const rim = new THREE.PointLight(0x72d7ff, 3.2, 28);
+    rim.position.set(-4, -1, 6);
+    scene.add(rim);
+
+    const raycaster = new THREE.Raycaster();
+    const ndc = new THREE.Vector2();
+    const grabPlane = new THREE.Plane(new THREE.Vector3(0, 0, 1), 0);
+    const grabPoint = new THREE.Vector3();
+
+    const linkGeometry = new THREE.BufferGeometry();
+    const linkPositions = new Float32Array(links.length * 2 * 3);
+    linkGeometry.setAttribute('position', new THREE.BufferAttribute(linkPositions, 3));
+    const linkMaterial = new THREE.LineBasicMaterial({
+      color: 0x72d7ff,
+      transparent: true,
+      opacity: 0.32
+    });
+    const linkLines = new THREE.LineSegments(linkGeometry, linkMaterial);
+    root.add(linkLines);
+
+    const nodeMaterial = new THREE.MeshPhysicalMaterial({
+      color: 0x72d7ff,
+      roughness: 0.18,
+      metalness: 0.1,
+      transmission: 0.12,
+      transparent: true,
+      opacity: 0.92,
+      emissive: 0x092f45,
+      emissiveIntensity: 0.78
+    });
+
+    const colors = {
+      'Spatial UX': 0x72d7ff,
+      'Cognition': 0xb7a0ff,
+      'Decision Science': 0xff9a84,
+      'Systems': 0x8ef0ba,
+      'Optimization': 0xf6d36f
+    };
+
+    for (const node of nodes) {
+      const material = nodeMaterial.clone();
+      material.color.setHex(colors[node.cluster] || 0x72d7ff);
+      material.emissive.setHex(dimColor(colors[node.cluster] || 0x72d7ff));
+      const mesh = new THREE.Mesh(new THREE.SphereGeometry(node.baseRadius, 28, 18), material);
+      mesh.position.copy(node.position);
+      mesh.userData.node = node;
+      nodeMeshes.set(node.id, mesh);
+      root.add(mesh);
+
+      const label = createLabel(node.label, colors[node.cluster] || 0x72d7ff);
+      label.position.copy(node.position).add(new THREE.Vector3(0, node.baseRadius + 0.22, 0));
+      labelSprites.set(node.id, label);
+      root.add(label);
+    }
+
+    const grid = new THREE.GridHelper(18, 36, 0x1b5972, 0x132432);
+    grid.position.y = -4.2;
+    grid.material.transparent = true;
+    grid.material.opacity = 0.38;
+    root.add(grid);
+
+    resize();
+    window.addEventListener('resize', resize);
+
+    window.addEventListener('pointermove', (event) => {
+      if (pointer.source !== 'hand') {
+        setPointer(event.clientX / window.innerWidth, event.clientY / window.innerHeight, 'mouse');
+      }
+
+      if (grabbed && pointer.source !== 'hand') {
+        moveGrabbed();
+      }
+    }, { passive: true });
+
+    window.addEventListener('pointerdown', () => {
+      if (hovered) {
+        selected = hovered;
+        grabbed = hovered;
+        showNode(selected, 'Mouse grab');
+      }
+    });
+
+    window.addEventListener('pointerup', () => {
+      grabbed = null;
+    });
+
+    window.addEventListener('wheel', (event) => {
+      cameraDistance = THREE.MathUtils.clamp(cameraDistance + Math.sign(event.deltaY) * 0.55, 4.4, 16);
+      zoomState.textContent = `${(9.2 / cameraDistance).toFixed(2)}x`;
+    }, { passive: true });
+
+    resetViewButton.addEventListener('click', resetView);
+    startCameraButton.addEventListener('click', startCamera);
+
+    async function startCamera() {
+      if (cameraRunning) return;
+      startCameraButton.disabled = true;
+      startCameraButton.textContent = 'Starting camera';
+      inputState.textContent = 'Requesting webcam';
+
+      try {
+        handsController = new Hands({
+          locateFile: (file) => `https://cdn.jsdelivr.net/npm/@mediapipe/hands/${file}`
+        });
+        handsController.setOptions({
+          maxNumHands: 2,
+          modelComplexity: 1,
+          minDetectionConfidence: 0.58,
+          minTrackingConfidence: 0.55
+        });
+        handsController.onResults(onHandResults);
+
+        cameraController = new Camera(video, {
+          onFrame: async () => {
+            await handsController.send({ image: video });
+          },
+          width: 960,
+          height: 540
+        });
+        await cameraController.start();
+        cameraRunning = true;
+        inputState.textContent = 'MediaPipe hand tracking';
+        startCameraButton.textContent = 'Hand tracking active';
+      } catch (error) {
+        inputState.textContent = 'Camera blocked, using mouse fallback';
+        startCameraButton.textContent = 'Camera unavailable';
+        console.warn(error);
+      } finally {
+        startCameraButton.disabled = false;
+      }
+    }
+
+    function onHandResults(results) {
+      handCtx.clearRect(0, 0, handCanvas.width, handCanvas.height);
+      lastHandAt = performance.now();
+
+      const hands = (results.multiHandLandmarks || []).slice(0, 2).map((landmarks) =>
+        landmarks.map((point) => ({ x: 1 - point.x, y: point.y, z: point.z }))
+      );
+
+      drawHands(hands);
+
+      if (!hands.length) {
+        inputState.textContent = cameraRunning ? 'Camera active, no hand' : 'Mouse fallback';
+        gestureState.textContent = 'Open hand pointer';
+        return;
+      }
+
+      inputState.textContent = `${hands.length} hand${hands.length > 1 ? 's' : ''} tracked`;
+
+      const primary = hands[0];
+      const index = primary[8];
+      const thumb = primary[4];
+      setPointer(index.x, index.y, 'hand');
+      const pinchDistance = distance2D(index, thumb);
+      const isPinched = pinch.active
+        ? pinchDistance < pinch.releaseThreshold
+        : pinchDistance < pinch.pressThreshold;
+
+      if (hands.length === 2 && isPinched && isHandPinched(hands[1])) {
+        handleTwoHandZoom(hands);
+        return;
+      }
+
+      twoHandZoom.active = false;
+
+      if (isPinched && !pinch.active) {
+        pinch.active = true;
+        pinch.startedAt = performance.now();
+        cursor.classList.add('pinched');
+        if (hovered) {
+          selected = hovered;
+          grabbed = hovered;
+          showNode(selected, 'Pinch grab');
+        }
+      } else if (!isPinched && pinch.active) {
+        const duration = performance.now() - pinch.startedAt;
+        if (duration < 420 && hovered) {
+          selected = hovered;
+          showNode(selected, 'Pinch select');
+        }
+        pinch.active = false;
+        grabbed = null;
+        cursor.classList.remove('pinched');
+      }
+
+      if (pinch.active && grabbed) {
+        moveGrabbed();
+        gestureState.textContent = 'Pinch grab';
+      } else {
+        gestureState.textContent = 'Open hand pointer';
+        const speed = Math.hypot(pointer.vx, pointer.vy);
+        if (speed > 0.08) {
+          rotationMomentum.x += pointer.vy * 0.18;
+          rotationMomentum.y += pointer.vx * 0.18;
+          gestureState.textContent = 'Swipe spin';
+        }
+      }
+    }
+
+    function handleTwoHandZoom(hands) {
+      const a = hands[0][8];
+      const b = hands[1][8];
+      const span = distance2D(a, b);
+      if (!twoHandZoom.active) {
+        twoHandZoom.active = true;
+        twoHandZoom.startSpan = span;
+        twoHandZoom.startDistance = cameraDistance;
+      }
+      const ratio = span / Math.max(twoHandZoom.startSpan, 0.001);
+      cameraDistance = THREE.MathUtils.clamp(twoHandZoom.startDistance / ratio, 4.2, 16.5);
+      gestureState.textContent = 'Two-hand zoom';
+      zoomState.textContent = `${(9.2 / cameraDistance).toFixed(2)}x`;
+      grabbed = null;
+    }
+
+    function isHandPinched(hand) {
+      return distance2D(hand[8], hand[4]) < (pinch.active ? pinch.releaseThreshold : pinch.pressThreshold);
+    }
+
+    function setPointer(x, y, source) {
+      pointer.lastX = pointer.x;
+      pointer.lastY = pointer.y;
+      pointer.x = THREE.MathUtils.clamp(x, 0.02, 0.98);
+      pointer.y = THREE.MathUtils.clamp(y, 0.02, 0.98);
+      pointer.vx = pointer.x - pointer.lastX;
+      pointer.vy = pointer.y - pointer.lastY;
+      pointer.source = source;
+      cursor.style.left = `${pointer.x * 100}%`;
+      cursor.style.top = `${pointer.y * 100}%`;
+    }
+
+    function moveGrabbed() {
+      if (!grabbed) return;
+      ndc.set(pointer.x * 2 - 1, -(pointer.y * 2 - 1));
+      raycaster.setFromCamera(ndc, camera);
+      grabPlane.normal.set(0, 0, 1).applyQuaternion(root.quaternion).normalize();
+      grabPlane.constant = -grabbed.position.dot(grabPlane.normal);
+      raycaster.ray.intersectPlane(grabPlane, grabPoint);
+      if (grabPoint) {
+        const local = root.worldToLocal(grabPoint.clone());
+        grabbed.position.lerp(local, 0.34);
+        grabbed.userData.node.position.copy(grabbed.position);
+      }
+    }
+
+    function drawHands(hands) {
+      for (const landmarks of hands) {
+        handCtx.strokeStyle = 'rgba(114, 215, 255, 0.52)';
+        handCtx.lineWidth = 2;
+        const connections = [
+          [0, 1], [1, 2], [2, 3], [3, 4],
+          [0, 5], [5, 6], [6, 7], [7, 8],
+          [0, 9], [9, 10], [10, 11], [11, 12],
+          [0, 13], [13, 14], [14, 15], [15, 16],
+          [0, 17], [17, 18], [18, 19], [19, 20],
+          [5, 9], [9, 13], [13, 17]
+        ];
+        for (const [a, b] of connections) {
+          const pa = landmarks[a];
+          const pb = landmarks[b];
+          handCtx.beginPath();
+          handCtx.moveTo(pa.x * handCanvas.width, pa.y * handCanvas.height);
+          handCtx.lineTo(pb.x * handCanvas.width, pb.y * handCanvas.height);
+          handCtx.stroke();
+        }
+        for (const point of landmarks) {
+          handCtx.beginPath();
+          handCtx.arc(point.x * handCanvas.width, point.y * handCanvas.height, 3.5, 0, Math.PI * 2);
+          handCtx.fillStyle = 'rgba(142, 240, 186, 0.78)';
+          handCtx.fill();
+        }
+      }
+    }
+
+    function animate() {
+      requestAnimationFrame(animate);
+      const time = performance.now() * 0.001;
+      if (performance.now() - lastHandAt > 900 && cameraRunning) {
+        handCtx.clearRect(0, 0, handCanvas.width, handCanvas.height);
+      }
+
+      simulateGraph();
+      updateLinks();
+      updateLabels(time);
+      updateHover();
+
+      rotationMomentum.multiplyScalar(0.965);
+      root.rotation.x += rotationMomentum.x * 0.01;
+      root.rotation.y += rotationMomentum.y * 0.01;
+      root.rotation.z = Math.sin(time * 0.24) * 0.035;
+      camera.position.z += (cameraDistance - camera.position.z) * 0.08;
+      grid.position.z = ((time * 0.62) % 1) - 0.5;
+
+      renderer.render(scene, camera);
+    }
+
+    function simulateGraph() {
+      for (const node of nodes) {
+        if (grabbed?.userData.node === node) continue;
+        node.velocity.multiplyScalar(0.88);
+      }
+
+      for (let i = 0; i < nodes.length; i++) {
+        for (let j = i + 1; j < nodes.length; j++) {
+          const a = nodes[i];
+          const b = nodes[j];
+          const delta = a.position.clone().sub(b.position);
+          const dist = Math.max(delta.length(), 0.18);
+          const force = Math.min(0.018 / (dist * dist), 0.015);
+          delta.normalize().multiplyScalar(force);
+          a.velocity.add(delta);
+          b.velocity.sub(delta);
+        }
+      }
+
+      for (const link of links) {
+        const a = nodes.find((node) => node.id === link.source);
+        const b = nodes.find((node) => node.id === link.target);
+        const delta = b.position.clone().sub(a.position);
+        const dist = Math.max(delta.length(), 0.001);
+        const target = link.strength || 1.45;
+        const force = (dist - target) * 0.0025;
+        delta.normalize().multiplyScalar(force);
+        if (grabbed?.userData.node !== a) a.velocity.add(delta);
+        if (grabbed?.userData.node !== b) b.velocity.sub(delta);
+      }
+
+      for (const node of nodes) {
+        if (grabbed?.userData.node !== node) {
+          const anchorForce = node.position.clone().multiplyScalar(-0.0008);
+          node.velocity.add(anchorForce);
+          node.position.add(node.velocity);
+        }
+        const mesh = nodeMeshes.get(node.id);
+        mesh.position.copy(node.position);
+      }
+    }
+
+    function updateLinks() {
+      let offset = 0;
+      for (const link of links) {
+        const a = nodeMeshes.get(link.source).position;
+        const b = nodeMeshes.get(link.target).position;
+        linkPositions[offset++] = a.x;
+        linkPositions[offset++] = a.y;
+        linkPositions[offset++] = a.z;
+        linkPositions[offset++] = b.x;
+        linkPositions[offset++] = b.y;
+        linkPositions[offset++] = b.z;
+      }
+      linkGeometry.attributes.position.needsUpdate = true;
+    }
+
+    function updateLabels(time) {
+      for (const node of nodes) {
+        const mesh = nodeMeshes.get(node.id);
+        const label = labelSprites.get(node.id);
+        const lift = node.baseRadius + 0.24 + Math.sin(time * 1.2 + node.weight) * 0.015;
+        label.position.copy(mesh.position).add(new THREE.Vector3(0, lift, 0));
+        label.quaternion.copy(camera.quaternion);
+        mesh.scale.setScalar((hovered === mesh ? 1.55 : selected === mesh ? 1.34 : 1) + Math.sin(time * 2 + node.weight) * 0.03);
+      }
+    }
+
+    function updateHover() {
+      ndc.set(pointer.x * 2 - 1, -(pointer.y * 2 - 1));
+      raycaster.setFromCamera(ndc, camera);
+      const hits = raycaster.intersectObjects([...nodeMeshes.values()], false);
+      hovered = hits[0]?.object || null;
+      targetState.textContent = hovered ? hovered.userData.node.label : 'None';
+      if (hovered && !selected) {
+        showNode(hovered, 'Hover');
+      }
+    }
+
+    function showNode(mesh, mode) {
+      const node = mesh.userData.node;
+      nodeTitle.textContent = node.label;
+      nodeText.textContent = node.description;
+      nodeCluster.textContent = node.cluster;
+      nodeLinks.textContent = String(links.filter((link) => link.source === node.id || link.target === node.id).length);
+      nodeMode.textContent = mode;
+    }
+
+    function resetView() {
+      cameraDistance = 9.2;
+      root.rotation.set(0, 0, 0);
+      rotationMomentum.set(0.08, -0.04);
+      selected = null;
+      grabbed = null;
+      showIntro();
+      zoomState.textContent = '1.00x';
+    }
+
+    function showIntro() {
+      nodeTitle.textContent = 'Topologies of Thought';
+      nodeText.textContent = 'Use your hand or mouse to point at a node. Pinch or click to inspect it. Hold the pinch to pull a node through the graph.';
+      nodeCluster.textContent = 'Spatial UX';
+      nodeLinks.textContent = String(links.length);
+      nodeMode.textContent = 'Ready';
+    }
+
+    function resize() {
+      const width = window.innerWidth;
+      const height = window.innerHeight;
+      renderer.setSize(width, height);
+      camera.aspect = width / height;
+      camera.updateProjectionMatrix();
+      handCanvas.width = Math.floor(width * Math.min(window.devicePixelRatio || 1, 1.75));
+      handCanvas.height = Math.floor(height * Math.min(window.devicePixelRatio || 1, 1.75));
+      handCanvas.style.width = `${width}px`;
+      handCanvas.style.height = `${height}px`;
+      handCtx.setTransform(handCanvas.width / width, 0, 0, handCanvas.height / height, 0, 0);
+    }
+
+    function createLabel(text, color) {
+      const labelCanvas = document.createElement('canvas');
+      labelCanvas.width = 512;
+      labelCanvas.height = 128;
+      const ctx = labelCanvas.getContext('2d');
+      ctx.clearRect(0, 0, labelCanvas.width, labelCanvas.height);
+      ctx.fillStyle = 'rgba(3, 5, 9, 0.54)';
+      roundRect(ctx, 20, 24, 472, 72, 18);
+      ctx.fill();
+      ctx.strokeStyle = `#${color.toString(16).padStart(6, '0')}`;
+      ctx.globalAlpha = 0.8;
+      ctx.stroke();
+      ctx.globalAlpha = 1;
+      ctx.fillStyle = '#f7f9ff';
+      ctx.font = '700 34px system-ui, sans-serif';
+      ctx.textAlign = 'center';
+      ctx.textBaseline = 'middle';
+      ctx.fillText(text, 256, 60, 430);
+
+      const texture = new THREE.CanvasTexture(labelCanvas);
+      texture.colorSpace = THREE.SRGBColorSpace;
+      const material = new THREE.SpriteMaterial({
+        map: texture,
+        transparent: true,
+        opacity: 0.88,
+        depthTest: false
+      });
+      const sprite = new THREE.Sprite(material);
+      sprite.scale.set(1.7, 0.42, 1);
+      return sprite;
+    }
+
+    function roundRect(ctx, x, y, width, height, radius) {
+      ctx.beginPath();
+      ctx.moveTo(x + radius, y);
+      ctx.arcTo(x + width, y, x + width, y + height, radius);
+      ctx.arcTo(x + width, y + height, x, y + height, radius);
+      ctx.arcTo(x, y + height, x, y, radius);
+      ctx.arcTo(x, y, x + width, y, radius);
+      ctx.closePath();
+    }
+
+    function distance2D(a, b) {
+      return Math.hypot(a.x - b.x, a.y - b.y);
+    }
+
+    function fibonacciPoint(index, total, radius) {
+      const phi = Math.acos(1 - 2 * (index + 0.5) / total);
+      const theta = Math.PI * (1 + Math.sqrt(5)) * index;
+      return new THREE.Vector3(
+        Math.cos(theta) * Math.sin(phi) * radius,
+        Math.sin(theta) * Math.sin(phi) * radius,
+        Math.cos(phi) * radius * 0.78
+      );
+    }
+
+    function dimColor(hex) {
+      const color = new THREE.Color(hex);
+      color.multiplyScalar(0.28);
+      return color.getHex();
+    }
+
+    function createGraphData() {
+      const nodes = [
+        ['spatial', 'Spatial UX', 'The design layer that makes digital objects feel located in real space.', 'Spatial UX', 7],
+        ['gesture', 'Gesture Taxonomy', 'A map of pointing, grabbing, command, and iconic gestures.', 'Spatial UX', 5],
+        ['raycast', 'Raycasting', 'Projects an intent line from hand or pointer into the 3D scene.', 'Systems', 6],
+        ['pinch', 'Pinch Select', 'A low-energy confirmation gesture with stable hysteresis thresholds.', 'Spatial UX', 6],
+        ['zoom', 'Two-Hand Zoom', 'Uses the span between both hands to dive into or out of the graph.', 'Spatial UX', 5],
+        ['ergonomics', 'Ergonomics', 'Keeps interaction in a comfortable chest-level workspace.', 'Cognition', 6],
+        ['fatigue', 'Arm Fatigue', 'The failure mode of holding unsupported gestures too high for too long.', 'Cognition', 4],
+        ['haptics', 'Self Haptics', 'Uses finger contact as physical confirmation when the UI has no real surface.', 'Cognition', 4],
+        ['mediapipe', 'MediaPipe', 'Client-side hand landmark detection using webcam frames.', 'Systems', 7],
+        ['landmarks', '21 Landmarks', 'A skeletal model of wrist, fingertips, knuckles, and relative depth.', 'Systems', 5],
+        ['filtering', 'EMA Filter', 'Smooths noisy hand motion while keeping fast gestures responsive.', 'Optimization', 5],
+        ['three', 'Three.js', 'The WebGL layer for graph nodes, links, cameras, and raycasting.', 'Systems', 7],
+        ['force', 'Force Graph', 'A spring system that lets ideas pull, orbit, and settle into clusters.', 'Systems', 6],
+        ['instancing', 'Instancing', 'Reduces draw calls when many nodes share geometry and material.', 'Optimization', 4],
+        ['textures', 'ImageBitmap', 'Moves expensive texture decoding away from the main thread.', 'Optimization', 4],
+        ['css3d', 'CSS3D Panels', 'Lets HTML panels feel anchored inside a spatial interface.', 'Spatial UX', 3],
+        ['midas', 'Midas Touch', 'The risk that looking or hovering accidentally triggers actions.', 'Cognition', 4],
+        ['thresholds', 'Hysteresis', 'Separate press and release thresholds prevent flickering gestures.', 'Optimization', 5],
+        ['data', 'Knowledge Data', 'Structured nodes and edges generated from concepts, documents, or feeds.', 'Decision Science', 5],
+        ['bias', 'Cognitive Bias', 'One example domain where graph relations become more useful in 3D.', 'Decision Science', 4],
+        ['pareto', 'Pareto Principle', 'A node in the thought map showing uneven leverage across systems.', 'Decision Science', 3],
+        ['feedback', 'Visual Feedback', 'Glow, cursor state, labels, and panels close the interaction loop.', 'Spatial UX', 5],
+        ['privacy', 'Local Webcam', 'Video frames remain on-device, avoiding server-side camera handling.', 'Systems', 5],
+        ['open', 'Open Source', 'The point: a shareable demo others can inspect, fork, and improve.', 'Systems', 6]
+      ].map(([id, label, description, cluster, weight]) => ({ id, label, description, cluster, weight }));
+
+      const edges = [
+        ['spatial', 'gesture'], ['spatial', 'three'], ['spatial', 'css3d'], ['gesture', 'raycast'],
+        ['gesture', 'pinch'], ['gesture', 'zoom'], ['pinch', 'thresholds'], ['pinch', 'haptics'],
+        ['zoom', 'force'], ['ergonomics', 'fatigue'], ['ergonomics', 'pinch'], ['ergonomics', 'midas'],
+        ['mediapipe', 'landmarks'], ['mediapipe', 'privacy'], ['landmarks', 'raycast'], ['landmarks', 'filtering'],
+        ['filtering', 'thresholds'], ['three', 'raycast'], ['three', 'force'], ['three', 'instancing'],
+        ['three', 'textures'], ['force', 'data'], ['data', 'bias'], ['data', 'pareto'],
+        ['feedback', 'midas'], ['feedback', 'pinch'], ['open', 'privacy'], ['open', 'three'],
+        ['open', 'mediapipe'], ['instancing', 'force'], ['textures', 'force'], ['css3d', 'feedback']
+      ];
+
+      return {
+        nodes,
+        links: edges.map(([source, target], index) => ({
+          source,
+          target,
+          strength: 1.25 + (index % 4) * 0.18
+        }))
+      };
+    }
+
+    showIntro();
+    updateLinks();
+    animate();
+  </script>
+</body>
+</html>

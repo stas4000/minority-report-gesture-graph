@@ -1,0 +1,19 @@
+{
+  "name": "minority-report-gesture-graph",
+  "version": "1.0.0",
+  "description": "Open-source Minority Report-style spatial knowledge graph controlled by webcam hand gestures.",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js",
+    "check": "node --check server.js"
+  },
+  "keywords": [
+    "mediapipe",
+    "threejs",
+    "gesture-control",
+    "spatial-computing",
+    "knowledge-graph"
+  ],
+  "author": "Bles Software",
+  "license": "MIT"
+}
