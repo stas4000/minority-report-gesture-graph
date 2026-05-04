@@ -414,7 +414,7 @@
         <h2 class="panel-title">Gesture state</h2>
         <div class="state-grid">
           <div class="state-row"><strong>Input</strong><span id="inputState">Mouse fallback</span></div>
-          <div class="state-row"><strong>Gesture</strong><span id="gestureState">Pointer hover</span></div>
+          <div class="state-row"><strong>Gesture</strong><span id="gestureState">Pinch ready</span></div>
           <div class="state-row"><strong>Target</strong><span id="targetState">None</span></div>
           <div class="state-row"><strong>Zoom</strong><span id="zoomState">1.00x</span></div>
         </div>
@@ -423,8 +423,8 @@
       <section class="panel right" aria-label="Gesture map">
         <h2 class="panel-title">Mappings</h2>
         <div class="state-grid">
-          <div class="gesture-row"><strong>Point</strong><span>Index finger raycasts into the graph.</span></div>
-          <div class="gesture-row"><strong>Pinch</strong><span>Select and hold a node through the camera overlay.</span></div>
+          <div class="gesture-row"><strong>Pinch</strong><span>Thumb and index together grab the nearest node.</span></div>
+          <div class="gesture-row"><strong>Drag</strong><span>Hold the pinch and move your hand to pull the node.</span></div>
           <div class="gesture-row"><strong>2 hands</strong><span>Pinch both hands and spread to zoom.</span></div>
           <div class="gesture-row"><strong>Mouse</strong><span>Move, click, drag, and wheel when camera is blocked.</span></div>
         </div>
@@ -432,7 +432,7 @@
 
       <section class="node-panel" aria-live="polite">
         <h2 id="nodeTitle">Topologies of Thought</h2>
-        <p id="nodeText">Start the camera layer, point at a node, then pinch to select and pull it through the spatial graph.</p>
+        <p id="nodeText">Start the camera layer, pinch near a node, then hold the pinch and move your hand to pull it through the spatial graph.</p>
         <div class="node-meta">
           <div class="metric"><span>Cluster</span><strong id="nodeCluster">Spatial UX</strong></div>
           <div class="metric"><span>Links</span><strong id="nodeLinks">32</strong></div>
@@ -486,8 +486,10 @@
     const pinch = {
       active: false,
       startedAt: 0,
-      pressThreshold: 0.62,
-      releaseThreshold: 0.82,
+      pressThreshold: 0.95,
+      releaseThreshold: 1.18,
+      absolutePress: 0.095,
+      absoluteRelease: 0.13,
       lastRatio: 1
     };
     const twoHandZoom = {
@@ -641,17 +643,15 @@
           pointer.source = 'mouse';
         }
         inputState.textContent = cameraRunning ? 'Camera active, no hand' : 'Mouse fallback';
-        gestureState.textContent = 'Pointer hover';
+        gestureState.textContent = 'Pinch ready';
         return;
       }
 
       lastHandAt = performance.now();
 
       const primary = hands[0];
-      const index = primary[8];
-      const thumb = primary[4];
-      setPointer(index.x, index.y, 'hand');
-      updateRaycastTarget('Hand hover');
+      const pinchPoint = getPinchPoint(primary);
+      setPointer(pinchPoint.x, pinchPoint.y, 'hand');
 
       const primaryPinch = getPinchSample(primary);
       pinch.lastRatio = primaryPinch.ratio;
@@ -669,36 +669,28 @@
         pinch.active = true;
         pinch.startedAt = performance.now();
         cursor.classList.add('pinched');
-        if (hoveredNode) {
-          selectedNode = hoveredNode;
-          grabbedNode = hoveredNode;
+        selectedNode = findClosestNodeToPointer();
+        if (selectedNode) {
+          grabbedNode = selectedNode;
           lockNode(grabbedNode);
           showNode(selectedNode, 'Pinch grab');
+          targetState.textContent = selectedNode.label;
+        } else {
+          targetState.textContent = 'Pinch detected';
         }
       } else if (!isPinched && pinch.active) {
-        const duration = performance.now() - pinch.startedAt;
-        if (duration < 420 && hoveredNode) {
-          selectedNode = hoveredNode;
-          showNode(selectedNode, 'Pinch select');
-        }
         pinch.active = false;
         cursor.classList.remove('pinched');
         releaseGrabbedNode();
+        targetState.textContent = selectedNode ? selectedNode.label : 'None';
       }
 
       if (pinch.active && grabbedNode) {
         moveGrabbedNode();
         gestureState.textContent = `Pinch grab ${pinch.lastRatio.toFixed(2)}`;
       } else {
-        gestureState.textContent = Math.hypot(pointer.vx, pointer.vy) > 0.08 ? 'Swipe spin' : `Pointer hover ${pinch.lastRatio.toFixed(2)}`;
-        if (Math.hypot(pointer.vx, pointer.vy) > 0.08) {
-          const current = Graph.cameraPosition();
-          Graph.cameraPosition({
-            x: current.x + pointer.vx * 28,
-            y: current.y - pointer.vy * 22,
-            z: current.z
-          }, { x: 0, y: 0, z: 0 }, 80);
-        }
+        gestureState.textContent = isPinched ? `Pinch detected ${pinch.lastRatio.toFixed(2)}` : `Pinch ready ${pinch.lastRatio.toFixed(2)}`;
+        if (!isPinched) targetState.textContent = 'Pinch only';
       }
     }
 
@@ -768,9 +760,28 @@
       Graph.d3ReheatSimulation();
     }
 
+    function findClosestNodeToPointer() {
+      const camera = Graph.camera();
+      let best = null;
+      let bestDistance = Infinity;
+
+      for (const node of graphData.nodes) {
+        const projected = new THREE.Vector3(node.x || 0, node.y || 0, node.z || 0).project(camera);
+        const sx = (projected.x + 1) / 2;
+        const sy = (-projected.y + 1) / 2;
+        const distance = Math.hypot(sx - pointer.x, sy - pointer.y);
+        if (distance < bestDistance) {
+          bestDistance = distance;
+          best = node;
+        }
+      }
+
+      return bestDistance < 0.32 ? best : null;
+    }
+
     function handleTwoHandZoom(hands) {
-      const a = hands[0][8];
-      const b = hands[1][8];
+      const a = getPinchPoint(hands[0]);
+      const b = getPinchPoint(hands[1]);
       const span = distance2D(a, b);
       if (!twoHandZoom.active) {
         twoHandZoom.active = true;
@@ -898,7 +909,7 @@
 
     function showIntro() {
       nodeTitle.textContent = 'Topologies of Thought';
-      nodeText.textContent = 'Start the camera layer, point at a node, then pinch to select and pull it through the spatial graph.';
+      nodeText.textContent = 'Start the camera layer, pinch near a node, then hold the pinch and move your hand to pull it through the spatial graph.';
       nodeCluster.textContent = 'Spatial UX';
       nodeLinks.textContent = String(graphData.links.length);
       nodeMode.textContent = 'Ready';
@@ -934,7 +945,9 @@
         if (performance.now() - lastHandAt > 900 && cameraRunning) {
           handCtx.clearRect(0, 0, handCanvas.width, handCanvas.height);
         }
-        updateRaycastTarget(pointer.source === 'hand' ? 'Hand hover' : 'Mouse hover');
+        if (pointer.source !== 'hand') {
+          updateRaycastTarget('Mouse hover');
+        }
         updateZoomState();
         requestAnimationFrame(tick);
       };
@@ -948,6 +961,13 @@
 
     function isHandPinched(hand) {
       return isPinchDetected(getPinchSample(hand), false);
+    }
+
+    function getPinchPoint(hand) {
+      return {
+        x: (hand[8].x + hand[4].x) / 2,
+        y: (hand[8].y + hand[4].y) / 2
+      };
     }
 
     function getPinchSample(hand) {
@@ -964,7 +984,9 @@
     }
 
     function isPinchDetected(sample, alreadyActive) {
-      return sample.ratio < (alreadyActive ? pinch.releaseThreshold : pinch.pressThreshold);
+      const ratioThreshold = alreadyActive ? pinch.releaseThreshold : pinch.pressThreshold;
+      const absoluteThreshold = alreadyActive ? pinch.absoluteRelease : pinch.absolutePress;
+      return sample.ratio < ratioThreshold || sample.distance < absoluteThreshold;
     }
 
     function distance2D(a, b) {

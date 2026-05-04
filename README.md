@@ -11,8 +11,8 @@ https://teleclaudius.bles-software.com/spatial-gesture-graph
 - Mirrors the webcam as a full-screen camera layer.
 - Tracks one or two hands in the browser using MediaPipe Hands.
 - Renders a transparent 3d-force-graph layer over the camera.
-- Uses Three.js raycasting to point at graph nodes from the hand cursor.
-- Uses pinch with hysteresis for stable select and grab.
+- Uses pinch midpoint selection instead of open-hand pointing.
+- Uses pinch with hysteresis for stable grab and drag.
 - Uses two simultaneous pinches to zoom in and out.
 - Falls back to mouse move, click, drag, and wheel when camera access is unavailable.
 
@@ -27,7 +27,7 @@ The page is built as four layers:
 - Hand layer: MediaPipe landmarks are drawn on a transparent canvas.
 - UI layer: compact debug, gesture, and node detail panels sit above the graph.
 
-The gesture bridge maps MediaPipe's thumb and index landmarks into normalized screen coordinates. A pinch casts a Three.js ray from that screen point into the 3D graph. If it intersects a node, the node is selected and can be pulled through the force simulation.
+The gesture bridge maps MediaPipe's thumb and index landmarks into normalized screen coordinates. Open-hand pointing is intentionally ignored. A one-hand pinch selects the nearest projected graph node and can pull it through the force simulation. Two simultaneous pinches map hand span to zoom.
 
 The graph data is a simple JSON shape:
 
@@ -54,8 +54,8 @@ http://127.0.0.1:8080
 
 ## Gesture Map
 
-- Point: index finger moves the cursor and raycasts into the graph.
-- Pinch: select, inspect, and hold to grab a node.
+- One-hand pinch: select, inspect, and hold to grab a node.
+- Hold pinch: move the hand to drag the grabbed node.
 - Two pinches: pull hands apart to zoom out, push hands together to zoom in.
 - Mouse fallback: move, click, drag, and wheel.
 
