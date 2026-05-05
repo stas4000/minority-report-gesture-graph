@@ -95,14 +95,14 @@
     .headline {
       position: fixed;
       z-index: 4;
-      top: clamp(70px, 11vh, 118px);
+      top: clamp(68px, 8.5vh, 94px);
       left: 50%;
-      max-width: min(92vw, 1080px);
+      max-width: min(88vw, 760px);
       transform: translateX(-50%);
       margin: 0;
       color: #fff;
-      font-size: clamp(2rem, 5.2vw, 5.25rem);
-      line-height: 0.98;
+      font-size: clamp(1.3rem, 3.05vw, 3.15rem);
+      line-height: 1.04;
       font-weight: 950;
       text-align: center;
       text-shadow:
@@ -126,6 +126,25 @@
       font-size: clamp(0.96rem, 1.7vw, 1.22rem);
       line-height: 1.42;
       text-shadow: 0 2px 18px rgba(0, 0, 0, 0.82);
+    }
+
+    .marketing-copy strong {
+      display: block;
+      margin-bottom: 6px;
+      color: #fff;
+      font-size: clamp(0.98rem, 1.7vw, 1.18rem);
+    }
+
+    .harness-actions {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+      margin-top: 12px;
+      pointer-events: auto;
+    }
+
+    .harness-actions .cta-button {
+      min-height: 38px;
     }
 
     .proof-strip {
@@ -522,9 +541,13 @@
     }
 
     .contact-panel p {
-      margin: 9px 0 14px;
+      margin: 9px 0 0;
       color: rgba(247, 249, 255, 0.72);
       line-height: 1.45;
+    }
+
+    .contact-panel .proof-strip {
+      margin: 15px 0 18px;
     }
 
     .lead-form {
@@ -655,7 +678,8 @@
 
       .headline {
         top: 82px;
-        font-size: clamp(1.62rem, 8vw, 2.8rem);
+        max-width: calc(100vw - 28px);
+        font-size: clamp(1.18rem, 6vw, 2rem);
       }
 
       .marketing-copy {
@@ -725,13 +749,12 @@
   <canvas id="hands" aria-hidden="true"></canvas>
   <div class="cursor" id="cursor" aria-hidden="true"></div>
   <button class="settings-toggle" id="settingsToggle" type="button" hidden aria-expanded="false">Show settings</button>
-  <h1 class="headline">Custom software that feels impossible until it ships.</h1>
+  <h1 class="headline">Bles Software Custom Interfaces</h1>
   <section class="marketing-copy" aria-label="Bles Software custom software proof">
-    <p>This live demo runs hand tracking, 3D graph physics, and real-time browser interaction. Bles Software builds custom AI tools, dashboards, automations, and web apps for teams that need serious execution.</p>
-    <div class="proof-strip" aria-label="Bles Software proof">
-      <span class="proof-pill">Built by Bles Software</span>
-      <a href="https://clutch.co/profile/bles-software" target="_blank" rel="noreferrer">4.9 on Clutch</a>
-      <span class="proof-pill">9 verified reviews</span>
+    <p><strong>Built with Telecladius Harness</strong>The same operating layer we use to ship fast public AI demos and production-grade software systems.</p>
+    <div class="harness-actions">
+      <button class="cta-button" type="button" data-open-telecladius>Get Access to Telecladius</button>
+      <a class="link-button" href="https://clutch.co/profile/bles-software" target="_blank" rel="noreferrer">4.9 on Clutch</a>
     </div>
   </section>
 
@@ -745,7 +768,7 @@
         <button class="primary" id="startCamera" type="button">Activate Camera</button>
         <button class="utility-only" id="resetView" type="button" hidden>Reset view</button>
         <button class="settings-hide" id="hideSettings" type="button">Hide settings</button>
-        <a class="link-button" href="https://github.com/stas4000/minority-report-gesture-graph" target="_blank" rel="noreferrer">GitHub Source</a>
+        <a class="link-button" href="https://github.com/stas4000/minority-report-gesture-graph" target="_blank" rel="noreferrer">Bles Software Open Source</a>
         <button class="cta-button" type="button" data-open-contact>Build Something Like This</button>
       </div>
     </header>
@@ -791,7 +814,7 @@
 
   <aside class="conversion-nudge" aria-label="Build with Bles Software">
     <p><strong>Need a custom interface or AI tool like this?</strong>Bles Software can build the production version for your business.</p>
-    <button class="cta-button" type="button" data-open-contact>Build Something Like This</button>
+    <button class="cta-button" type="button" data-open-contact>Hire Us</button>
   </aside>
 
   <div class="contact-backdrop" id="contact-backdrop" hidden></div>
@@ -839,6 +862,29 @@
     </form>
   </aside>
 
+  <aside class="contact-panel" id="telecladius-contact" aria-label="Get access to Telecladius" hidden>
+    <button class="close-contact" type="button" data-close-contact>Close</button>
+    <div class="panel-kicker">Telecladius Harness access</div>
+    <h2>Get access to Telecladius.</h2>
+    <p>Leave your name and email. We will contact you about access, fit, and next steps.</p>
+    <form class="lead-form" id="telecladius-form">
+      <label class="bot-field">
+        <span>Website</span>
+        <input name="website" autocomplete="off" tabindex="-1">
+      </label>
+      <label>
+        <span>Name</span>
+        <input name="name" autocomplete="name" placeholder="Your name" required>
+      </label>
+      <label>
+        <span>Email</span>
+        <input name="email" autocomplete="email" inputmode="email" placeholder="you@company.com" required>
+      </label>
+      <button type="submit">Request access</button>
+      <p class="form-status" id="telecladius-status" role="status" aria-live="polite"></p>
+    </form>
+  </aside>
+
   <script>
     const cameraFeed = document.getElementById('cameraFeed');
     const graphEl = document.getElementById('graph');
@@ -860,9 +906,13 @@
     const nodeMode = document.getElementById('nodeMode');
     const leadForm = document.getElementById('lead-form');
     const leadStatus = document.getElementById('form-status');
+    const telecladiusForm = document.getElementById('telecladius-form');
+    const telecladiusStatus = document.getElementById('telecladius-status');
     const contactPanel = document.getElementById('contact');
+    const telecladiusPanel = document.getElementById('telecladius-contact');
     const contactBackdrop = document.getElementById('contact-backdrop');
     const openContactButtons = document.querySelectorAll('[data-open-contact]');
+    const openTelecladiusButtons = document.querySelectorAll('[data-open-telecladius]');
     const closeContactButtons = document.querySelectorAll('[data-close-contact]');
 
     const graphData = createGraphData();
@@ -988,12 +1038,14 @@
     startCameraButton.addEventListener('click', startCamera);
     resetViewButton.addEventListener('click', resetView);
     openContactButtons.forEach((button) => button.addEventListener('click', openContact));
+    openTelecladiusButtons.forEach((button) => button.addEventListener('click', openTelecladius));
     closeContactButtons.forEach((button) => button.addEventListener('click', closeContact));
     contactBackdrop?.addEventListener('click', closeContact);
     window.addEventListener('keydown', (event) => {
-      if (event.key === 'Escape' && !contactPanel.hidden) closeContact();
+      if (event.key === 'Escape' && (!contactPanel.hidden || !telecladiusPanel.hidden)) closeContact();
     });
     leadForm?.addEventListener('submit', submitLeadForm);
+    telecladiusForm?.addEventListener('submit', submitTelecladiusForm);
     settingsToggle.addEventListener('click', () => setMobileSettingsCollapsed(false));
     hideSettingsButton.addEventListener('click', () => setMobileSettingsCollapsed(true));
     if (typeof mobileSettingsQuery.addEventListener === 'function') {
@@ -1028,13 +1080,23 @@
 
     function openContact() {
       contactPanel.hidden = false;
+      telecladiusPanel.hidden = true;
       contactBackdrop.hidden = false;
       markDemoEngaged();
       setTimeout(() => contactPanel.querySelector('input[name="name"]')?.focus(), 40);
     }
 
+    function openTelecladius() {
+      telecladiusPanel.hidden = false;
+      contactPanel.hidden = true;
+      contactBackdrop.hidden = false;
+      markDemoEngaged();
+      setTimeout(() => telecladiusPanel.querySelector('input[name="name"]')?.focus(), 40);
+    }
+
     function closeContact() {
       contactPanel.hidden = true;
+      telecladiusPanel.hidden = true;
       contactBackdrop.hidden = true;
     }
 
@@ -1071,6 +1133,40 @@
       }
     }
 
+    async function submitTelecladiusForm(event) {
+      event.preventDefault();
+      const submitButton = telecladiusForm.querySelector('button[type="submit"]');
+      const data = Object.fromEntries(new FormData(telecladiusForm).entries());
+      const email = String(data.email || '').trim();
+      data.contact = email;
+      data.interest = 'Telecladius Harness access';
+      data.inquiryType = 'telecladius-access';
+      data.details = 'Requested access to Telecladius Harness from the Spatial Gesture Graph demo.';
+      data.source = 'telecladius-harness-access-spatial-gesture-graph';
+      data.page = window.location.href;
+
+      telecladiusStatus.textContent = 'Sending...';
+      submitButton.disabled = true;
+
+      try {
+        const response = await fetch('/api/contact', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(data)
+        });
+        const payload = await response.json().catch(() => ({}));
+        if (!response.ok || !payload.ok) {
+          throw new Error(payload.error || 'Request failed');
+        }
+        telecladiusForm.reset();
+        telecladiusStatus.textContent = 'Received. We will contact you about access.';
+      } catch (error) {
+        telecladiusStatus.textContent = 'Could not send here. Email info@bles-software.com.';
+      } finally {
+        submitButton.disabled = false;
+      }
+    }
+
     function markDemoEngaged() {
       document.body.classList.add('demo-engaged');
     }
@@ -1088,9 +1184,9 @@
         });
         handsController.setOptions({
           maxNumHands: 2,
-          modelComplexity: mobileMode ? 0 : 1,
-          minDetectionConfidence: mobileMode ? 0.38 : 0.46,
-          minTrackingConfidence: mobileMode ? 0.38 : 0.46
+          modelComplexity: 1,
+          minDetectionConfidence: mobileMode ? 0.42 : 0.46,
+          minTrackingConfidence: mobileMode ? 0.5 : 0.46
         });
         handsController.onResults(onHandResults);
 
@@ -1150,7 +1246,7 @@
 
       const handedness = results.multiHandedness || [];
       const hands = (results.multiHandLandmarks || []).slice(0, 2).map((landmarks, index) => {
-        const hand = landmarks.map((point) => ({ x: 1 - point.x, y: point.y, z: point.z }));
+        const hand = landmarks.map(mapLandmarkToViewport);
         hand.label = handedness[index]?.label || '';
         hand.score = handedness[index]?.score || 0;
         return hand;
@@ -1226,6 +1322,37 @@
         gestureState.textContent = didRotate ? 'Fist spin' : isFist ? 'Fist ready' : isPinched ? `Pinch detected ${pinch.lastRatio.toFixed(2)}` : `Pinch ready ${pinch.lastRatio.toFixed(2)}`;
         if (!isPinched) targetState.textContent = 'Pinch only';
       }
+    }
+
+    function mapLandmarkToViewport(point) {
+      const viewportWidth = window.innerWidth || 1;
+      const viewportHeight = window.innerHeight || 1;
+      const videoWidth = cameraFeed.videoWidth || (mobileSettingsQuery.matches ? 720 : 1280);
+      const videoHeight = cameraFeed.videoHeight || (mobileSettingsQuery.matches ? 960 : 720);
+      const videoAspect = videoWidth / Math.max(videoHeight, 1);
+      const viewportAspect = viewportWidth / Math.max(viewportHeight, 1);
+
+      let displayWidth = viewportWidth;
+      let displayHeight = viewportHeight;
+      let offsetX = 0;
+      let offsetY = 0;
+
+      if (videoAspect > viewportAspect) {
+        displayHeight = viewportHeight;
+        displayWidth = viewportHeight * videoAspect;
+        offsetX = (viewportWidth - displayWidth) / 2;
+      } else {
+        displayWidth = viewportWidth;
+        displayHeight = viewportWidth / Math.max(videoAspect, 0.001);
+        offsetY = (viewportHeight - displayHeight) / 2;
+      }
+
+      const mirroredX = 1 - point.x;
+      return {
+        x: (offsetX + mirroredX * displayWidth) / viewportWidth,
+        y: (offsetY + point.y * displayHeight) / viewportHeight,
+        z: point.z
+      };
     }
 
     function setPointer(x, y, source) {

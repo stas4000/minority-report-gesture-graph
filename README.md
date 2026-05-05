@@ -10,6 +10,7 @@ Built by Bles Software:
 
 - Need a custom AI interface, internal dashboard, automation system, or advanced web app? Start here: https://teleclaudius.bles-software.com/spatial-gesture-graph
 - Clutch proof: https://clutch.co/profile/bles-software
+- Built with Telecladius Harness. Request access from the live demo.
 
 ## What It Does
 
@@ -20,6 +21,7 @@ Built by Bles Software:
 - Uses pinch with hysteresis for stable grab and drag.
 - Uses two simultaneous pinches to zoom in and out.
 - Uses closed-fist movement to rotate the graph smoothly.
+- Maps hand landmarks into the visible mobile camera viewport so pinch alignment stays stable on phones.
 - Falls back to mouse move, click, drag, and wheel when camera access is unavailable.
 
 Webcam frames stay local. The demo has no backend dependency.
