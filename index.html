@@ -199,19 +199,25 @@
 
     .middle {
       min-height: 0;
-      display: flex;
-      align-items: flex-start;
-      justify-content: space-between;
+      display: grid;
+      grid-template-columns: minmax(260px, 294px) 1fr minmax(320px, 410px);
+      grid-template-rows: auto auto minmax(0, 1fr);
+      align-items: start;
       gap: 14px;
     }
 
     .panel {
+      grid-column: 1;
+      grid-row: 1;
       width: min(294px, calc(100vw - 24px));
       padding: 13px;
     }
 
     .panel.right {
-      align-self: flex-end;
+      grid-column: 1;
+      grid-row: 2;
+      align-self: start;
+      margin-top: 0;
     }
 
     .panel-title {
@@ -251,6 +257,8 @@
     }
 
     .node-panel {
+      grid-column: 3;
+      grid-row: 1 / span 3;
       width: min(410px, calc(100vw - 24px));
       align-self: flex-end;
       justify-self: end;
@@ -339,6 +347,7 @@
       }
 
       .middle {
+        display: flex;
         flex-direction: column;
       }
 
