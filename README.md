@@ -6,11 +6,7 @@ Live demo:
 
 https://teleclaudius.bles-software.com/spatial-gesture-graph
 
-Built by Bles Software:
-
-- Need a custom AI interface, internal dashboard, automation system, or advanced web app? Start here: https://teleclaudius.bles-software.com/spatial-gesture-graph
-- Clutch proof: https://clutch.co/profile/bles-software
-- Built with Telecladius Harness. Request access from the live demo.
+This repository intentionally contains only the technical demo source.
 
 ## What It Does
 
@@ -76,5 +72,3 @@ http://127.0.0.1:8080
 ## Notes
 
 This is a public proof-of-concept. Production spatial interfaces should add deeper filtering, accessibility alternatives, explicit consent UX, device testing, and performance tuning for large real datasets.
-
-For commercial builds, Bles Software develops custom software, AI tools, dashboards, automations, and advanced interfaces for teams that need execution beyond a prototype.

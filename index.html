@@ -4,8 +4,8 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
   <meta name="theme-color" content="#06080d">
-  <title>Build Custom AI Software | Bles Software Spatial Gesture Graph</title>
-  <meta name="description" content="A live browser demo by Bles Software showing custom AI interfaces, hand tracking, 3D interaction, and advanced software execution.">
+  <title>Minority Report Gesture Graph</title>
+  <meta name="description" content="Open-source hand-tracked 3D force graph over a live camera feed using MediaPipe Hands, Three.js, and 3d-force-graph.">
   <link rel="icon" href="data:,">
   <style>
     :root {
@@ -15,7 +15,6 @@
       --soft: rgba(247, 249, 255, 0.48);
       --panel: rgba(8, 11, 18, 0.58);
       --line: rgba(255, 255, 255, 0.16);
-      --field: rgba(255, 255, 255, 0.08);
       --cyan: #72d7ff;
       --green: #8ef0ba;
       --coral: #ff9a84;
@@ -128,25 +127,6 @@
       text-shadow: 0 2px 18px rgba(0, 0, 0, 0.82);
     }
 
-    .marketing-copy strong {
-      display: block;
-      margin-bottom: 6px;
-      color: #fff;
-      font-size: clamp(0.98rem, 1.7vw, 1.18rem);
-    }
-
-    .harness-actions {
-      display: flex;
-      flex-wrap: wrap;
-      gap: 8px;
-      margin-top: 12px;
-      pointer-events: auto;
-    }
-
-    .harness-actions .cta-button {
-      min-height: 38px;
-    }
-
     .proof-strip {
       display: flex;
       flex-wrap: wrap;
@@ -254,13 +234,6 @@
       background:
         linear-gradient(135deg, rgba(114, 215, 255, 0.24), rgba(142, 240, 186, 0.12)),
         rgba(255, 255, 255, 0.08);
-    }
-
-    .cta-button {
-      border-color: rgba(246, 211, 111, 0.68);
-      color: #071018;
-      background: linear-gradient(135deg, #fff7d0, #8ef0ba 58%, #72d7ff);
-      box-shadow: 0 10px 34px rgba(114, 215, 255, 0.2);
     }
 
     .utility-only {
@@ -391,46 +364,6 @@
       font-size: 0.8rem;
     }
 
-    .conversion-nudge {
-      position: fixed;
-      right: clamp(14px, 3vw, 28px);
-      bottom: clamp(14px, 3vw, 28px);
-      z-index: 7;
-      width: min(360px, calc(100vw - 28px));
-      padding: 13px;
-      border: 1px solid rgba(246, 211, 111, 0.34);
-      border-radius: 8px;
-      background:
-        linear-gradient(180deg, rgba(255, 255, 255, 0.1), rgba(255, 255, 255, 0.035)),
-        rgba(8, 11, 18, 0.74);
-      box-shadow: 0 18px 70px rgba(0, 0, 0, 0.4);
-      backdrop-filter: blur(18px) saturate(135%);
-      pointer-events: none;
-      opacity: 0;
-      transform: translateY(12px);
-      transition: opacity 180ms ease, transform 180ms ease;
-    }
-
-    body.demo-engaged .conversion-nudge {
-      opacity: 1;
-      transform: translateY(0);
-      pointer-events: auto;
-    }
-
-    .conversion-nudge p {
-      margin: 0 0 10px;
-      color: rgba(247, 249, 255, 0.78);
-      font-size: 0.86rem;
-      line-height: 1.38;
-    }
-
-    .conversion-nudge strong {
-      display: block;
-      margin-bottom: 3px;
-      color: #fff;
-      font-size: 0.92rem;
-    }
-
     .cursor {
       position: fixed;
       left: 50%;
@@ -475,161 +408,6 @@
 
     .settings-hide {
       display: none;
-    }
-
-    .contact-panel[hidden],
-    .contact-backdrop[hidden] {
-      display: none;
-    }
-
-    .contact-backdrop {
-      position: fixed;
-      inset: 0;
-      z-index: 8;
-      background: rgba(3, 5, 9, 0.34);
-      backdrop-filter: blur(9px);
-      pointer-events: auto;
-    }
-
-    .contact-panel {
-      position: fixed;
-      top: 50%;
-      left: 50%;
-      transform: translate(-50%, -50%);
-      z-index: 9;
-      width: min(460px, calc(100vw - 28px));
-      max-height: min(82vh, 690px);
-      overflow-y: auto;
-      padding: 18px;
-      border: 1px solid rgba(255, 255, 255, 0.18);
-      border-radius: 8px;
-      background:
-        linear-gradient(180deg, rgba(255, 255, 255, 0.12), rgba(255, 255, 255, 0.04)),
-        rgba(8, 11, 18, 0.82);
-      box-shadow: 0 28px 90px rgba(0, 0, 0, 0.48);
-      backdrop-filter: blur(24px) saturate(134%);
-      pointer-events: auto;
-      touch-action: pan-y;
-    }
-
-    .contact-panel * {
-      letter-spacing: 0;
-    }
-
-    .close-contact {
-      float: right;
-      margin: -4px -4px 8px 12px;
-      padding: 7px 9px;
-      border-radius: 6px;
-      color: rgba(255, 255, 255, 0.86);
-      font-size: 0.78rem;
-    }
-
-    .panel-kicker {
-      margin-bottom: 8px;
-      color: rgba(142, 240, 186, 0.94);
-      font-size: 0.75rem;
-      font-weight: 820;
-      text-transform: uppercase;
-    }
-
-    .contact-panel h2 {
-      margin: 0;
-      color: #fff;
-      font-size: clamp(1.28rem, 2.2vw, 1.72rem);
-      line-height: 1.08;
-    }
-
-    .contact-panel p {
-      margin: 9px 0 0;
-      color: rgba(247, 249, 255, 0.72);
-      line-height: 1.45;
-    }
-
-    .contact-panel .proof-strip {
-      margin: 15px 0 18px;
-    }
-
-    .lead-form {
-      display: grid;
-      gap: 10px;
-    }
-
-    .field-row {
-      display: grid;
-      grid-template-columns: 1fr 1fr;
-      gap: 10px;
-    }
-
-    .lead-form label {
-      display: grid;
-      gap: 6px;
-      color: rgba(247, 249, 255, 0.76);
-      font-size: 0.76rem;
-      font-weight: 680;
-    }
-
-    .lead-form input,
-    .lead-form select,
-    .lead-form textarea {
-      width: 100%;
-      min-height: 42px;
-      border: 1px solid rgba(255, 255, 255, 0.14);
-      border-radius: 6px;
-      background: var(--field);
-      color: #fff;
-      outline: none;
-      padding: 10px 11px;
-      font: inherit;
-      font-size: 0.88rem;
-      user-select: text;
-      touch-action: manipulation;
-    }
-
-    .lead-form textarea {
-      min-height: 88px;
-      resize: vertical;
-      touch-action: pan-y;
-    }
-
-    .lead-form input::placeholder,
-    .lead-form textarea::placeholder {
-      color: rgba(247, 249, 255, 0.38);
-    }
-
-    .lead-form input:focus,
-    .lead-form select:focus,
-    .lead-form textarea:focus {
-      border-color: rgba(114, 215, 255, 0.74);
-      box-shadow: 0 0 0 3px rgba(114, 215, 255, 0.14);
-    }
-
-    .lead-form button[type="submit"] {
-      min-height: 44px;
-      border: 0;
-      color: #061018;
-      background: linear-gradient(135deg, #fff7d0, #8ef0ba 58%, #72d7ff);
-      font-weight: 850;
-    }
-
-    .lead-form button:disabled {
-      opacity: 0.68;
-      cursor: wait;
-    }
-
-    .form-status {
-      min-height: 18px;
-      margin: 0;
-      color: rgba(247, 249, 255, 0.76);
-      font-size: 0.78rem;
-    }
-
-    .bot-field {
-      position: absolute;
-      left: -10000px;
-      width: 1px;
-      height: 1px;
-      opacity: 0;
     }
 
     @media (max-width: 980px) {
@@ -715,7 +493,6 @@
 
       body.mobile-settings-collapsed .headline,
       body.mobile-settings-collapsed .marketing-copy,
-      body.mobile-settings-collapsed .conversion-nudge,
       body.mobile-settings-collapsed .topbar,
       body.mobile-settings-collapsed .footer {
         display: none;
@@ -725,14 +502,6 @@
         pointer-events: none;
       }
 
-      .field-row {
-        grid-template-columns: 1fr;
-      }
-
-      .contact-panel {
-        width: min(380px, calc(100vw - 24px));
-        padding: 15px;
-      }
     }
   </style>
   <script src="https://cdn.jsdelivr.net/npm/@mediapipe/camera_utils/camera_utils.js" crossorigin="anonymous"></script>
@@ -749,12 +518,14 @@
   <canvas id="hands" aria-hidden="true"></canvas>
   <div class="cursor" id="cursor" aria-hidden="true"></div>
   <button class="settings-toggle" id="settingsToggle" type="button" hidden aria-expanded="false">Show settings</button>
-  <h1 class="headline">Bles Software Custom Interfaces</h1>
-  <section class="marketing-copy" aria-label="Bles Software custom software proof">
-    <p><strong>Built with Telecladius Harness</strong>The same operating layer we use to ship fast public AI demos and production-grade software systems.</p>
-    <div class="harness-actions">
-      <button class="cta-button" type="button" data-open-telecladius>Get Access to Telecladius</button>
-      <a class="link-button" href="https://clutch.co/profile/bles-software" target="_blank" rel="noreferrer">4.9 on Clutch</a>
+  <h1 class="headline">Minority Report Gesture Graph</h1>
+  <section class="marketing-copy" aria-label="Technical demo summary">
+    <p>Hand tracking, 3D graph physics, and camera-overlay interaction in one static browser demo.</p>
+    <div class="proof-strip" aria-label="Technology stack">
+      <span class="proof-pill">MediaPipe Hands</span>
+      <span class="proof-pill">Three.js</span>
+      <span class="proof-pill">3d-force-graph</span>
+      <span class="proof-pill">Webcam stays local</span>
     </div>
   </section>
 
@@ -762,14 +533,13 @@
     <header class="topbar">
       <div class="brand">
         <h2>Spatial Gesture Graph</h2>
-        <span class="subtitle">Open-source proof of advanced custom AI interface work</span>
+        <span class="subtitle">Open-source hand-tracked spatial interface demo</span>
       </div>
       <div class="actions">
         <button class="primary" id="startCamera" type="button">Activate Camera</button>
         <button class="utility-only" id="resetView" type="button" hidden>Reset view</button>
         <button class="settings-hide" id="hideSettings" type="button">Hide settings</button>
-        <a class="link-button" href="https://github.com/stas4000/minority-report-gesture-graph" target="_blank" rel="noreferrer">Bles Software Open Source</a>
-        <button class="cta-button" type="button" data-open-contact>Build Something Like This</button>
+        <a class="link-button" href="https://github.com/stas4000/minority-report-gesture-graph" target="_blank" rel="noreferrer">GitHub Source</a>
       </div>
     </header>
 
@@ -808,82 +578,9 @@
 
     <footer class="footer">
       <span>Webcam frames stay local. MediaPipe runs in the browser.</span>
-      <span>Bles Software builds custom AI tools, internal systems, and advanced web apps.</span>
+      <span>Open-source spatial computing demo with mouse fallback.</span>
     </footer>
   </div>
-
-  <aside class="conversion-nudge" aria-label="Build with Bles Software">
-    <p><strong>Need a custom interface or AI tool like this?</strong>Bles Software can build the production version for your business.</p>
-    <button class="cta-button" type="button" data-open-contact>Hire Us</button>
-  </aside>
-
-  <div class="contact-backdrop" id="contact-backdrop" hidden></div>
-  <aside class="contact-panel" id="contact" aria-label="Contact Bles Software" hidden>
-    <button class="close-contact" type="button" data-close-contact>Close</button>
-    <div class="panel-kicker">Bles Software build desk</div>
-    <h2>Tell us what you want to build.</h2>
-    <p>We build custom AI tools, dashboards, automations, internal systems, and advanced web interfaces. This demo is proof of the level of execution.</p>
-    <div class="proof-strip" aria-label="Clutch proof">
-      <a href="https://clutch.co/profile/bles-software" target="_blank" rel="noreferrer">4.9 on Clutch</a>
-      <span class="proof-pill">5.0 cost</span>
-      <span class="proof-pill">5.0 referral</span>
-    </div>
-    <form class="lead-form" id="lead-form">
-      <label class="bot-field">
-        <span>Website</span>
-        <input name="website" autocomplete="off" tabindex="-1">
-      </label>
-      <div class="field-row">
-        <label>
-          <span>Name</span>
-          <input name="name" autocomplete="name" placeholder="Your name" required>
-        </label>
-        <label>
-          <span>Email or WhatsApp</span>
-          <input name="contact" autocomplete="email" placeholder="How to reach you" required>
-        </label>
-      </div>
-      <label>
-        <span>What do you want to build?</span>
-        <select name="inquiryType" required>
-          <option value="custom-ai-interface">Custom AI interface</option>
-          <option value="internal-software">Internal software or dashboard</option>
-          <option value="automation-system">Automation system</option>
-          <option value="advanced-web-app">Advanced web app</option>
-          <option value="not-sure">Not sure yet</option>
-        </select>
-      </label>
-      <label>
-        <span>Project details</span>
-        <textarea name="details" placeholder="What should the software do? Timeline, budget, or current pain helps." required></textarea>
-      </label>
-      <button type="submit">Send project</button>
-      <p class="form-status" id="form-status" role="status" aria-live="polite"></p>
-    </form>
-  </aside>
-
-  <aside class="contact-panel" id="telecladius-contact" aria-label="Get access to Telecladius" hidden>
-    <button class="close-contact" type="button" data-close-contact>Close</button>
-    <div class="panel-kicker">Telecladius Harness access</div>
-    <h2>Get access to Telecladius.</h2>
-    <p>Leave your name and email. We will contact you about access, fit, and next steps.</p>
-    <form class="lead-form" id="telecladius-form">
-      <label class="bot-field">
-        <span>Website</span>
-        <input name="website" autocomplete="off" tabindex="-1">
-      </label>
-      <label>
-        <span>Name</span>
-        <input name="name" autocomplete="name" placeholder="Your name" required>
-      </label>
-      <label>
-        <span>Email</span>
-        <input name="email" autocomplete="email" inputmode="email" placeholder="you@company.com" required>
-      </label>
-      <button type="submit">Request access</button>
-      <p class="form-status" id="telecladius-status" role="status" aria-live="polite"></p>
-    </form>
-  </aside>
 
   <script>
     const cameraFeed = document.getElementById('cameraFeed');
@@ -904,17 +601,6 @@
     const nodeCluster = document.getElementById('nodeCluster');
     const nodeLinks = document.getElementById('nodeLinks');
     const nodeMode = document.getElementById('nodeMode');
-    const leadForm = document.getElementById('lead-form');
-    const leadStatus = document.getElementById('form-status');
-    const telecladiusForm = document.getElementById('telecladius-form');
-    const telecladiusStatus = document.getElementById('telecladius-status');
-    const contactPanel = document.getElementById('contact');
-    const telecladiusPanel = document.getElementById('telecladius-contact');
-    const contactBackdrop = document.getElementById('contact-backdrop');
-    const openContactButtons = document.querySelectorAll('[data-open-contact]');
-    const openTelecladiusButtons = document.querySelectorAll('[data-open-telecladius]');
-    const closeContactButtons = document.querySelectorAll('[data-close-contact]');
-
     const graphData = createGraphData();
     const colors = {
       'Spatial UX': '#72d7ff',
@@ -1037,15 +723,6 @@
     window.addEventListener('resize', resize);
     startCameraButton.addEventListener('click', startCamera);
     resetViewButton.addEventListener('click', resetView);
-    openContactButtons.forEach((button) => button.addEventListener('click', openContact));
-    openTelecladiusButtons.forEach((button) => button.addEventListener('click', openTelecladius));
-    closeContactButtons.forEach((button) => button.addEventListener('click', closeContact));
-    contactBackdrop?.addEventListener('click', closeContact);
-    window.addEventListener('keydown', (event) => {
-      if (event.key === 'Escape' && (!contactPanel.hidden || !telecladiusPanel.hidden)) closeContact();
-    });
-    leadForm?.addEventListener('submit', submitLeadForm);
-    telecladiusForm?.addEventListener('submit', submitTelecladiusForm);
     settingsToggle.addEventListener('click', () => setMobileSettingsCollapsed(false));
     hideSettingsButton.addEventListener('click', () => setMobileSettingsCollapsed(true));
     if (typeof mobileSettingsQuery.addEventListener === 'function') {
@@ -1072,104 +749,8 @@
     window.addEventListener('pointerup', releaseGrabbedNode);
 
     graphEl.addEventListener('wheel', () => {
-      markDemoEngaged();
       window.requestAnimationFrame(updateZoomState);
     }, { passive: true });
-
-    window.setTimeout(markDemoEngaged, 26000);
-
-    function openContact() {
-      contactPanel.hidden = false;
-      telecladiusPanel.hidden = true;
-      contactBackdrop.hidden = false;
-      markDemoEngaged();
-      setTimeout(() => contactPanel.querySelector('input[name="name"]')?.focus(), 40);
-    }
-
-    function openTelecladius() {
-      telecladiusPanel.hidden = false;
-      contactPanel.hidden = true;
-      contactBackdrop.hidden = false;
-      markDemoEngaged();
-      setTimeout(() => telecladiusPanel.querySelector('input[name="name"]')?.focus(), 40);
-    }
-
-    function closeContact() {
-      contactPanel.hidden = true;
-      telecladiusPanel.hidden = true;
-      contactBackdrop.hidden = true;
-    }
-
-    async function submitLeadForm(event) {
-      event.preventDefault();
-      const submitButton = leadForm.querySelector('button[type="submit"]');
-      const data = Object.fromEntries(new FormData(leadForm).entries());
-      const contact = String(data.contact || '').trim();
-      if (contact.includes('@')) data.email = contact;
-      else data.phone = contact;
-      data.interest = leadForm.querySelector('select[name="inquiryType"]')?.selectedOptions[0]?.textContent || data.inquiryType;
-      data.source = 'teleclaudius-spatial-gesture-graph';
-      data.page = window.location.href;
-
-      leadStatus.textContent = 'Sending...';
-      submitButton.disabled = true;
-
-      try {
-        const response = await fetch('/api/contact', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify(data)
-        });
-        const payload = await response.json().catch(() => ({}));
-        if (!response.ok || !payload.ok) {
-          throw new Error(payload.error || 'Request failed');
-        }
-        leadForm.reset();
-        leadStatus.textContent = 'Received. We will get back to you shortly.';
-      } catch (error) {
-        leadStatus.textContent = 'Could not send here. Email info@bles-software.com.';
-      } finally {
-        submitButton.disabled = false;
-      }
-    }
-
-    async function submitTelecladiusForm(event) {
-      event.preventDefault();
-      const submitButton = telecladiusForm.querySelector('button[type="submit"]');
-      const data = Object.fromEntries(new FormData(telecladiusForm).entries());
-      const email = String(data.email || '').trim();
-      data.contact = email;
-      data.interest = 'Telecladius Harness access';
-      data.inquiryType = 'telecladius-access';
-      data.details = 'Requested access to Telecladius Harness from the Spatial Gesture Graph demo.';
-      data.source = 'telecladius-harness-access-spatial-gesture-graph';
-      data.page = window.location.href;
-
-      telecladiusStatus.textContent = 'Sending...';
-      submitButton.disabled = true;
-
-      try {
-        const response = await fetch('/api/contact', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify(data)
-        });
-        const payload = await response.json().catch(() => ({}));
-        if (!response.ok || !payload.ok) {
-          throw new Error(payload.error || 'Request failed');
-        }
-        telecladiusForm.reset();
-        telecladiusStatus.textContent = 'Received. We will contact you about access.';
-      } catch (error) {
-        telecladiusStatus.textContent = 'Could not send here. Email info@bles-software.com.';
-      } finally {
-        submitButton.disabled = false;
-      }
-    }
-
-    function markDemoEngaged() {
-      document.body.classList.add('demo-engaged');
-    }
 
     async function startCamera() {
       if (cameraRunning) return;
@@ -1202,7 +783,6 @@
         cameraRunning = true;
         inputState.textContent = 'Camera overlay active';
         startCameraButton.textContent = 'Camera active';
-        markDemoEngaged();
         syncMobileSettingsState({ collapseOnMobile: true });
       } catch (error) {
         inputState.textContent = 'Camera blocked, mouse fallback';
