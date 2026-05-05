@@ -486,10 +486,8 @@
     const pinch = {
       active: false,
       startedAt: 0,
-      pressThreshold: 0.98,
-      releaseThreshold: 1.22,
-      absolutePress: 0.12,
-      absoluteRelease: 0.17,
+      pressThreshold: 0.2,
+      releaseThreshold: 0.32,
       grabRadius: 0.46,
       lastRatio: 1
     };
@@ -1061,9 +1059,9 @@
 
     function isPinchDetected(sample, alreadyActive) {
       if (!alreadyActive) {
-        return sample.ratio < pinch.pressThreshold || sample.distance < pinch.absolutePress;
+        return sample.ratio < pinch.pressThreshold;
       }
-      return sample.ratio < pinch.releaseThreshold && sample.distance < pinch.absoluteRelease;
+      return sample.ratio < pinch.releaseThreshold;
     }
 
     function distance2D(a, b) {
