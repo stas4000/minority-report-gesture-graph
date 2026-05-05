@@ -6,6 +6,11 @@ Live demo:
 
 https://teleclaudius.bles-software.com/spatial-gesture-graph
 
+Built by Bles Software:
+
+- Need a custom AI interface, internal dashboard, automation system, or advanced web app? Start here: https://teleclaudius.bles-software.com/spatial-gesture-graph
+- Clutch proof: https://clutch.co/profile/bles-software
+
 ## What It Does
 
 - Mirrors the webcam as a full-screen camera layer.
@@ -14,6 +19,7 @@ https://teleclaudius.bles-software.com/spatial-gesture-graph
 - Uses pinch midpoint selection instead of open-hand pointing.
 - Uses pinch with hysteresis for stable grab and drag.
 - Uses two simultaneous pinches to zoom in and out.
+- Uses closed-fist movement to rotate the graph smoothly.
 - Falls back to mouse move, click, drag, and wheel when camera access is unavailable.
 
 Webcam frames stay local. The demo has no backend dependency.
@@ -68,3 +74,5 @@ http://127.0.0.1:8080
 ## Notes
 
 This is a public proof-of-concept. Production spatial interfaces should add deeper filtering, accessibility alternatives, explicit consent UX, device testing, and performance tuning for large real datasets.
+
+For commercial builds, Bles Software develops custom software, AI tools, dashboards, automations, and advanced interfaces for teams that need execution beyond a prototype.
