@@ -552,10 +552,17 @@
     };
     const handRotate = {
       primed: false,
-      deadzone: 0.006,
-      maxStep: 0.05,
-      yawSpeed: 3.2,
-      pitchSpeed: 2.35
+      x: 0.5,
+      y: 0.5,
+      deadzone: 0.011,
+      minStep: 0.0025,
+      maxStep: 0.032,
+      smoothing: 0.24,
+      yawSpeed: 2.9,
+      pitchSpeed: 2.05,
+      spinDamping: 0.84,
+      velocityYaw: 0,
+      velocityPitch: 0
     };
 
     let cameraRunning = false;
@@ -749,7 +756,7 @@
         if (pointer.source === 'hand') {
           pointer.source = 'mouse';
         }
-        handRotate.primed = false;
+        resetHandRotation();
         inputState.textContent = cameraRunning ? 'Camera active, no hand' : 'Mouse fallback';
         gestureState.textContent = 'Pinch ready';
         return;
@@ -782,7 +789,7 @@
       twoHandZoom.candidateFrames = 0;
       const didRotate = isFist && hands.length === 1 && rotateGraphFromHandMotion();
       if (!isFist || isPinched || hands.length !== 1) {
-        handRotate.primed = false;
+        resetHandRotation();
       }
 
       if (isPinched) {
@@ -913,17 +920,72 @@
     function rotateGraphFromHandMotion() {
       if (!handRotate.primed) {
         handRotate.primed = true;
+        handRotate.x = pointer.x;
+        handRotate.y = pointer.y;
         return false;
       }
 
-      const dx = clamp(pointer.vx, -handRotate.maxStep, handRotate.maxStep);
-      const dy = clamp(pointer.vy, -handRotate.maxStep, handRotate.maxStep);
-      if (Math.hypot(dx, dy) < handRotate.deadzone) return false;
+      const targetDx = pointer.x - handRotate.x;
+      const targetDy = pointer.y - handRotate.y;
+      if (Math.hypot(targetDx, targetDy) < handRotate.deadzone) {
+        return false;
+      }
 
-      cameraYaw += dx * handRotate.yawSpeed;
-      cameraPitch = clamp(cameraPitch + dy * handRotate.pitchSpeed, -0.82, 0.82);
-      applyOrbitCamera(70);
+      const nextX = handRotate.x + targetDx * handRotate.smoothing;
+      const nextY = handRotate.y + targetDy * handRotate.smoothing;
+      const dx = clamp(nextX - handRotate.x, -handRotate.maxStep, handRotate.maxStep);
+      const dy = clamp(nextY - handRotate.y, -handRotate.maxStep, handRotate.maxStep);
+      handRotate.x = nextX;
+      handRotate.y = nextY;
+      if (Math.hypot(dx, dy) < handRotate.minStep) return false;
+
+      handRotate.velocityYaw += dx * handRotate.yawSpeed;
+      handRotate.velocityPitch += dy * handRotate.pitchSpeed;
+      applyFistSpinMomentum();
       return true;
+    }
+
+    function resetHandRotation() {
+      handRotate.primed = false;
+      handRotate.x = pointer.x;
+      handRotate.y = pointer.y;
+    }
+
+    function applyFistSpinMomentum() {
+      if (Math.hypot(handRotate.velocityYaw, handRotate.velocityPitch) < 0.0002) {
+        handRotate.velocityYaw = 0;
+        handRotate.velocityPitch = 0;
+        return;
+      }
+
+      rotateCameraBy(handRotate.velocityYaw, handRotate.velocityPitch);
+      handRotate.velocityYaw *= handRotate.spinDamping;
+      handRotate.velocityPitch *= handRotate.spinDamping;
+    }
+
+    function rotateCameraBy(deltaYaw, deltaPitch) {
+      const controls = Graph.controls();
+      const camera = Graph.camera();
+      const target = controls.target || new THREE.Vector3(0, 0, 0);
+      const offset = camera.position.clone().sub(target);
+      const spherical = new THREE.Spherical().setFromVector3(offset);
+      spherical.theta += deltaYaw;
+      spherical.phi = clamp(spherical.phi + deltaPitch, 0.28, Math.PI - 0.28);
+      offset.setFromSpherical(spherical);
+      camera.position.copy(target).add(offset);
+      camera.lookAt(target);
+      controls.update();
+      syncOrbitAnglesFromCamera();
+    }
+
+    function syncOrbitAnglesFromCamera() {
+      const controls = Graph.controls();
+      const target = controls.target || new THREE.Vector3(0, 0, 0);
+      const offset = Graph.camera().position.clone().sub(target);
+      const spherical = new THREE.Spherical().setFromVector3(offset);
+      cameraDistance = offset.length();
+      cameraYaw = spherical.theta;
+      cameraPitch = clamp(Math.PI / 2 - spherical.phi, -0.82, 0.82);
     }
 
     function applyOrbitCamera(duration = 70) {
@@ -977,6 +1039,7 @@
       if (!twoHandZoom.active) {
         twoHandZoom.active = true;
         twoHandZoom.startSpan = span;
+        syncOrbitAnglesFromCamera();
         twoHandZoom.startDistance = cameraDistance;
       }
 
@@ -1157,6 +1220,7 @@
         if (pointer.source !== 'hand') {
           updateRaycastTarget('Mouse hover');
         }
+        applyFistSpinMomentum();
         updateZoomState();
         requestAnimationFrame(tick);
       };
