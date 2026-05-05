@@ -495,6 +495,7 @@
     };
     const twoHandZoom = {
       active: false,
+      candidateFrames: 0,
       startSpan: 0,
       startDistance: 340
     };
@@ -505,6 +506,7 @@
     let hoveredNode = null;
     let selectedNode = null;
     let grabbedNode = null;
+    let grabbedNodeDistance = null;
     let lastHandAt = 0;
     let cameraDistance = 340;
 
@@ -552,6 +554,7 @@
     if (typeof Graph.d3VelocityDecay === 'function') {
       Graph.d3VelocityDecay(0.23);
     }
+    keepGraphEngineAwake();
 
     const bloomLight = new THREE.PointLight(0x72d7ff, 1.2, 700);
     bloomLight.position.set(-90, -40, 210);
@@ -628,9 +631,13 @@
     function onHandResults(results) {
       handCtx.clearRect(0, 0, handCanvas.width, handCanvas.height);
 
-      const hands = (results.multiHandLandmarks || []).slice(0, 2).map((landmarks) =>
-        landmarks.map((point) => ({ x: 1 - point.x, y: point.y, z: point.z }))
-      );
+      const handedness = results.multiHandedness || [];
+      const hands = (results.multiHandLandmarks || []).slice(0, 2).map((landmarks, index) => {
+        const hand = landmarks.map((point) => ({ x: 1 - point.x, y: point.y, z: point.z }));
+        hand.label = handedness[index]?.label || '';
+        hand.score = handedness[index]?.score || 0;
+        return hand;
+      });
 
       drawHands(hands);
 
@@ -659,12 +666,19 @@
       inputState.textContent = `${hands.length} hand${hands.length > 1 ? 's' : ''} tracked · pinch ${primaryPinch.ratio.toFixed(2)}`;
       const isPinched = isPinchDetected(primaryPinch, pinch.active);
 
-      if (hands.length === 2 && isPinched && isHandPinched(hands[1])) {
-        handleTwoHandZoom(hands);
+      const hasTwoHandZoomIntent = hands.length === 2 && isPinched && isHandPinched(hands[1]) && areDistinctHands(hands[0], hands[1]);
+      if (hasTwoHandZoomIntent) {
+        twoHandZoom.candidateFrames += 1;
+        if (twoHandZoom.active || twoHandZoom.candidateFrames >= 2) {
+          handleTwoHandZoom(hands);
+        } else {
+          gestureState.textContent = 'Two-hand confirm';
+        }
         return;
       }
 
       twoHandZoom.active = false;
+      twoHandZoom.candidateFrames = 0;
 
       if (isPinched) {
         if (!pinch.active) {
@@ -728,6 +742,7 @@
       node.fx = node.x;
       node.fy = node.y;
       node.fz = node.z;
+      grabbedNodeDistance = getNodeCameraDistance(node);
       reheatGraph();
     }
 
@@ -736,14 +751,16 @@
       ndc.set(pointer.x * 2 - 1, -(pointer.y * 2 - 1));
       raycaster.setFromCamera(ndc, Graph.camera());
 
-      const nodeVector = new THREE.Vector3(grabbedNode.x || 0, grabbedNode.y || 0, grabbedNode.z || 0);
-      const cameraVector = Graph.camera().position.clone();
-      const distance = Math.max(cameraVector.distanceTo(nodeVector), 80);
+      const distance = Math.max(grabbedNodeDistance || getNodeCameraDistance(grabbedNode), 80);
       raycaster.ray.at(distance, grabPoint);
 
+      grabbedNode.x = grabPoint.x;
+      grabbedNode.y = grabPoint.y;
+      grabbedNode.z = grabPoint.z;
       grabbedNode.fx = grabPoint.x;
       grabbedNode.fy = grabPoint.y;
       grabbedNode.fz = grabPoint.z;
+      syncNodeVisual(grabbedNode);
       showNode(grabbedNode, pointer.source === 'hand' ? 'Pinch drag' : 'Mouse drag');
       reheatGraph();
     }
@@ -754,6 +771,7 @@
       grabbedNode.fy = undefined;
       grabbedNode.fz = undefined;
       grabbedNode = null;
+      grabbedNodeDistance = null;
       reheatGraph();
     }
 
@@ -761,6 +779,30 @@
       if (typeof Graph.d3ReheatSimulation === 'function') {
         Graph.d3ReheatSimulation();
       }
+      if (typeof Graph.resumeAnimation === 'function') {
+        Graph.resumeAnimation();
+      }
+      keepGraphEngineAwake();
+    }
+
+    function keepGraphEngineAwake() {
+      if (typeof Graph.cooldownTicks === 'function') {
+        Graph.cooldownTicks(Infinity);
+      }
+      if (typeof Graph.cooldownTime === 'function') {
+        Graph.cooldownTime(Infinity);
+      }
+    }
+
+    function getNodeCameraDistance(node) {
+      const nodeVector = new THREE.Vector3(node.x || 0, node.y || 0, node.z || 0);
+      return Graph.camera().position.clone().distanceTo(nodeVector);
+    }
+
+    function syncNodeVisual(node) {
+      const object = node.__object || node.__mesh?.parent;
+      if (!object) return;
+      object.position.set(node.x || 0, node.y || 0, node.z || 0);
     }
 
     function acquirePinchNode() {
@@ -813,6 +855,18 @@
       gestureState.textContent = 'Two-hand zoom';
       zoomState.textContent = `${(340 / cameraDistance).toFixed(2)}x`;
       releaseGrabbedNode();
+    }
+
+    function areDistinctHands(firstHand, secondHand) {
+      const firstPinch = getPinchPoint(firstHand);
+      const secondPinch = getPinchPoint(secondHand);
+      const pinchSpan = distance2D(firstPinch, secondPinch);
+      const wristSpan = distance2D(firstHand[0], secondHand[0]);
+      const indexSpan = distance2D(firstHand[8], secondHand[8]);
+      const labelsConflict = firstHand.label && secondHand.label && firstHand.label === secondHand.label;
+      if (pinchSpan < 0.18 || wristSpan < 0.12 || indexSpan < 0.14) return false;
+      if (labelsConflict && pinchSpan < 0.32) return false;
+      return true;
     }
 
     function drawHands(hands) {
@@ -883,6 +937,7 @@
       label.position.y = radius + 10;
       group.add(label);
       group.userData.node = node;
+      node.__object = group;
       return group;
     }
 
