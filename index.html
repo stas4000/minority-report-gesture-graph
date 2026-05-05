@@ -486,10 +486,11 @@
     const pinch = {
       active: false,
       startedAt: 0,
-      pressThreshold: 0.95,
-      releaseThreshold: 1.18,
-      absolutePress: 0.095,
-      absoluteRelease: 0.13,
+      pressThreshold: 0.98,
+      releaseThreshold: 1.22,
+      absolutePress: 0.12,
+      absoluteRelease: 0.17,
+      grabRadius: 0.46,
       lastRatio: 1
     };
     const twoHandZoom = {
@@ -598,8 +599,8 @@
         handsController.setOptions({
           maxNumHands: 2,
           modelComplexity: 1,
-          minDetectionConfidence: 0.58,
-          minTrackingConfidence: 0.55
+          minDetectionConfidence: 0.46,
+          minTrackingConfidence: 0.46
         });
         handsController.onResults(onHandResults);
 
@@ -665,18 +666,14 @@
 
       twoHandZoom.active = false;
 
-      if (isPinched && !pinch.active) {
-        pinch.active = true;
-        pinch.startedAt = performance.now();
-        cursor.classList.add('pinched');
-        selectedNode = findClosestNodeToPointer();
-        if (selectedNode) {
-          grabbedNode = selectedNode;
-          lockNode(grabbedNode);
-          showNode(selectedNode, 'Pinch grab');
-          targetState.textContent = selectedNode.label;
-        } else {
-          targetState.textContent = 'Pinch detected';
+      if (isPinched) {
+        if (!pinch.active) {
+          pinch.active = true;
+          pinch.startedAt = performance.now();
+          cursor.classList.add('pinched');
+        }
+        if (!grabbedNode) {
+          acquirePinchNode();
         }
       } else if (!isPinched && pinch.active) {
         pinch.active = false;
@@ -731,7 +728,7 @@
       node.fx = node.x;
       node.fy = node.y;
       node.fz = node.z;
-      Graph.d3ReheatSimulation();
+      reheatGraph();
     }
 
     function moveGrabbedNode() {
@@ -748,7 +745,7 @@
       grabbedNode.fy = grabPoint.y;
       grabbedNode.fz = grabPoint.z;
       showNode(grabbedNode, pointer.source === 'hand' ? 'Pinch drag' : 'Mouse drag');
-      Graph.d3ReheatSimulation();
+      reheatGraph();
     }
 
     function releaseGrabbedNode() {
@@ -757,10 +754,31 @@
       grabbedNode.fy = undefined;
       grabbedNode.fz = undefined;
       grabbedNode = null;
-      Graph.d3ReheatSimulation();
+      reheatGraph();
     }
 
-    function findClosestNodeToPointer() {
+    function reheatGraph() {
+      if (typeof Graph.d3ReheatSimulation === 'function') {
+        Graph.d3ReheatSimulation();
+      }
+    }
+
+    function acquirePinchNode() {
+      const node = findClosestNodeToPointer(pinch.grabRadius);
+      if (!node) {
+        targetState.textContent = 'Pinch detected';
+        return false;
+      }
+
+      selectedNode = node;
+      grabbedNode = node;
+      lockNode(grabbedNode);
+      showNode(selectedNode, 'Pinch grab');
+      targetState.textContent = selectedNode.label;
+      return true;
+    }
+
+    function findClosestNodeToPointer(maxDistance = pinch.grabRadius) {
       const camera = Graph.camera();
       let best = null;
       let bestDistance = Infinity;
@@ -776,7 +794,7 @@
         }
       }
 
-      return bestDistance < 0.32 ? best : null;
+      return bestDistance < maxDistance ? best : null;
     }
 
     function handleTwoHandZoom(hands) {
@@ -798,6 +816,9 @@
     }
 
     function drawHands(hands) {
+      const width = handCanvas.clientWidth || window.innerWidth;
+      const height = handCanvas.clientHeight || window.innerHeight;
+
       for (const landmarks of hands) {
         handCtx.strokeStyle = 'rgba(114, 215, 255, 0.56)';
         handCtx.lineWidth = 2;
@@ -814,15 +835,15 @@
           const pa = landmarks[a];
           const pb = landmarks[b];
           handCtx.beginPath();
-          handCtx.moveTo(pa.x * handCanvas.width, pa.y * handCanvas.height);
-          handCtx.lineTo(pb.x * handCanvas.width, pb.y * handCanvas.height);
+          handCtx.moveTo(pa.x * width, pa.y * height);
+          handCtx.lineTo(pb.x * width, pb.y * height);
           handCtx.stroke();
         }
 
         landmarks.forEach((point, index) => {
           handCtx.beginPath();
           const radius = index === 4 || index === 8 ? 5.2 : 3.3;
-          handCtx.arc(point.x * handCanvas.width, point.y * handCanvas.height, radius, 0, Math.PI * 2);
+          handCtx.arc(point.x * width, point.y * height, radius, 0, Math.PI * 2);
           handCtx.fillStyle = index === 4 || index === 8 ? 'rgba(255, 209, 112, 0.9)' : 'rgba(142, 240, 186, 0.78)';
           handCtx.fill();
         });
@@ -922,7 +943,7 @@
       cameraDistance = 340;
       Graph.cameraPosition({ x: 0, y: 0, z: cameraDistance }, { x: 0, y: 0, z: 0 }, 450);
       Graph.zoomToFit(650, 54);
-      Graph.d3ReheatSimulation();
+      reheatGraph();
       zoomState.textContent = '1.00x';
       targetState.textContent = 'None';
       showIntro();
