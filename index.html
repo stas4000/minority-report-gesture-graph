@@ -434,6 +434,7 @@
         <div class="state-grid">
           <div class="gesture-row"><strong>Pinch</strong><span>Thumb and index together grab the nearest node.</span></div>
           <div class="gesture-row"><strong>Drag</strong><span>Hold the pinch and move your hand to pull the node.</span></div>
+          <div class="gesture-row"><strong>Swipe</strong><span>Move an open hand across the screen to rotate the graph.</span></div>
           <div class="gesture-row"><strong>2 hands</strong><span>Pinch both hands and spread to zoom.</span></div>
           <div class="gesture-row"><strong>Mouse</strong><span>Move, click, drag, and wheel when camera is blocked.</span></div>
         </div>
@@ -506,6 +507,13 @@
       startSpan: 0,
       startDistance: 340
     };
+    const handRotate = {
+      primed: false,
+      deadzone: 0.006,
+      maxStep: 0.05,
+      yawSpeed: 3.2,
+      pitchSpeed: 2.35
+    };
 
     let cameraRunning = false;
     let cameraController = null;
@@ -516,6 +524,8 @@
     let grabbedNodeDistance = null;
     let lastHandAt = 0;
     let cameraDistance = 340;
+    let cameraYaw = 0;
+    let cameraPitch = 0;
 
     const raycaster = new THREE.Raycaster();
     const ndc = new THREE.Vector2();
@@ -657,6 +667,7 @@
         if (pointer.source === 'hand') {
           pointer.source = 'mouse';
         }
+        handRotate.primed = false;
         inputState.textContent = cameraRunning ? 'Camera active, no hand' : 'Mouse fallback';
         gestureState.textContent = 'Pinch ready';
         return;
@@ -665,13 +676,12 @@
       lastHandAt = performance.now();
 
       const primary = hands[0];
-      const pinchPoint = getPinchPoint(primary);
-      setPointer(pinchPoint.x, pinchPoint.y, 'hand');
-
       const primaryPinch = getPinchSample(primary);
       pinch.lastRatio = primaryPinch.ratio;
-      inputState.textContent = `${hands.length} hand${hands.length > 1 ? 's' : ''} tracked · pinch ${primaryPinch.ratio.toFixed(2)}`;
       const isPinched = isPinchDetected(primaryPinch, pinch.active);
+      const interactionPoint = isPinched ? getPinchPoint(primary) : getHandCenter(primary);
+      setPointer(interactionPoint.x, interactionPoint.y, 'hand');
+      inputState.textContent = `${hands.length} hand${hands.length > 1 ? 's' : ''} tracked · pinch ${primaryPinch.ratio.toFixed(2)}`;
 
       const hasTwoHandZoomIntent = hands.length === 2 && isPinched && isHandPinched(hands[1]) && areDistinctHands(hands[0], hands[1]);
       if (hasTwoHandZoomIntent) {
@@ -686,6 +696,10 @@
 
       twoHandZoom.active = false;
       twoHandZoom.candidateFrames = 0;
+      const didRotate = !isPinched && hands.length === 1 && rotateGraphFromHandMotion();
+      if (isPinched || hands.length !== 1) {
+        handRotate.primed = false;
+      }
 
       if (isPinched) {
         if (!pinch.active) {
@@ -707,7 +721,7 @@
         moveGrabbedNode();
         gestureState.textContent = `Pinch grab ${pinch.lastRatio.toFixed(2)}`;
       } else {
-        gestureState.textContent = isPinched ? `Pinch detected ${pinch.lastRatio.toFixed(2)}` : `Pinch ready ${pinch.lastRatio.toFixed(2)}`;
+        gestureState.textContent = didRotate ? 'Hand rotate' : isPinched ? `Pinch detected ${pinch.lastRatio.toFixed(2)}` : `Pinch ready ${pinch.lastRatio.toFixed(2)}`;
         if (!isPinched) targetState.textContent = 'Pinch only';
       }
     }
@@ -812,6 +826,32 @@
       object.position.set(node.x || 0, node.y || 0, node.z || 0);
     }
 
+    function rotateGraphFromHandMotion() {
+      if (!handRotate.primed) {
+        handRotate.primed = true;
+        return false;
+      }
+
+      const dx = clamp(pointer.vx, -handRotate.maxStep, handRotate.maxStep);
+      const dy = clamp(pointer.vy, -handRotate.maxStep, handRotate.maxStep);
+      if (Math.hypot(dx, dy) < handRotate.deadzone) return false;
+
+      cameraYaw += dx * handRotate.yawSpeed;
+      cameraPitch = clamp(cameraPitch + dy * handRotate.pitchSpeed, -0.82, 0.82);
+      applyOrbitCamera(70);
+      return true;
+    }
+
+    function applyOrbitCamera(duration = 70) {
+      const pitchCos = Math.cos(cameraPitch);
+      Graph.cameraPosition({
+        x: Math.sin(cameraYaw) * pitchCos * cameraDistance,
+        y: Math.sin(cameraPitch) * cameraDistance,
+        z: Math.cos(cameraYaw) * pitchCos * cameraDistance
+      }, { x: 0, y: 0, z: 0 }, duration);
+      updateZoomState();
+    }
+
     function acquirePinchNode() {
       const node = findClosestNodeToPointer(pinch.grabRadius);
       if (!node) {
@@ -858,7 +898,7 @@
 
       const ratio = span / Math.max(twoHandZoom.startSpan, 0.001);
       cameraDistance = clamp(twoHandZoom.startDistance / ratio, 190, 620);
-      Graph.cameraPosition({ x: 0, y: 0, z: cameraDistance }, { x: 0, y: 0, z: 0 }, 70);
+      applyOrbitCamera(70);
       gestureState.textContent = 'Two-hand zoom';
       zoomState.textContent = `${(340 / cameraDistance).toFixed(2)}x`;
       releaseGrabbedNode();
@@ -1003,7 +1043,9 @@
       hoveredNode = null;
       releaseGrabbedNode();
       cameraDistance = 340;
-      Graph.cameraPosition({ x: 0, y: 0, z: cameraDistance }, { x: 0, y: 0, z: 0 }, 450);
+      cameraYaw = 0;
+      cameraPitch = 0;
+      applyOrbitCamera(450);
       Graph.zoomToFit(650, 54);
       reheatGraph();
       zoomState.textContent = '1.00x';
@@ -1050,6 +1092,14 @@
       return {
         x: (hand[8].x + hand[4].x) / 2,
         y: (hand[8].y + hand[4].y) / 2
+      };
+    }
+
+    function getHandCenter(hand) {
+      const points = [hand[0], hand[5], hand[9], hand[13], hand[17]];
+      return {
+        x: points.reduce((sum, point) => sum + point.x, 0) / points.length,
+        y: points.reduce((sum, point) => sum + point.y, 0) / points.length
       };
     }
 
