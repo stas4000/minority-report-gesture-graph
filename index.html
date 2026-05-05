@@ -341,6 +341,27 @@
         inset 0 0 10px rgba(142, 240, 186, 0.35);
     }
 
+    .settings-toggle {
+      display: none;
+      position: fixed;
+      z-index: 8;
+      top: max(11px, env(safe-area-inset-top));
+      left: max(11px, env(safe-area-inset-left));
+      pointer-events: auto;
+      border-color: rgba(114, 215, 255, 0.44);
+      background:
+        linear-gradient(135deg, rgba(114, 215, 255, 0.22), rgba(142, 240, 186, 0.1)),
+        rgba(8, 11, 18, 0.78);
+      box-shadow:
+        inset 0 1px 0 rgba(255, 255, 255, 0.14),
+        0 14px 46px rgba(0, 0, 0, 0.38);
+      backdrop-filter: blur(18px) saturate(132%);
+    }
+
+    .settings-hide {
+      display: none;
+    }
+
     @media (max-width: 980px) {
       .headline {
         top: 74px;
@@ -389,6 +410,23 @@
       .node-meta {
         grid-template-columns: 1fr;
       }
+
+      body.mobile-settings-collapsed .settings-toggle,
+      body.mobile-settings-ready:not(.mobile-settings-collapsed) .settings-hide {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+      }
+
+      body.mobile-settings-collapsed .headline,
+      body.mobile-settings-collapsed .topbar,
+      body.mobile-settings-collapsed .footer {
+        display: none;
+      }
+
+      body.mobile-settings-collapsed .ui {
+        pointer-events: none;
+      }
     }
   </style>
   <script src="https://cdn.jsdelivr.net/npm/@mediapipe/camera_utils/camera_utils.js" crossorigin="anonymous"></script>
@@ -404,6 +442,7 @@
   <div id="graph" aria-label="Camera-overlay spatial force graph"></div>
   <canvas id="hands" aria-hidden="true"></canvas>
   <div class="cursor" id="cursor" aria-hidden="true"></div>
+  <button class="settings-toggle" id="settingsToggle" type="button" hidden aria-expanded="false">Show settings</button>
   <p class="headline">Teleclaudius Harness</p>
 
   <div class="ui">
@@ -415,6 +454,7 @@
       <div class="actions">
         <button class="primary" id="startCamera" type="button">Start camera layer</button>
         <button id="resetView" type="button">Reset view</button>
+        <button class="settings-hide" id="hideSettings" type="button">Hide settings</button>
         <a class="link-button" href="https://github.com/stas4000/minority-report-gesture-graph">Source</a>
       </div>
     </header>
@@ -466,6 +506,8 @@
     const cursor = document.getElementById('cursor');
     const startCameraButton = document.getElementById('startCamera');
     const resetViewButton = document.getElementById('resetView');
+    const settingsToggle = document.getElementById('settingsToggle');
+    const hideSettingsButton = document.getElementById('hideSettings');
     const inputState = document.getElementById('inputState');
     const gestureState = document.getElementById('gestureState');
     const targetState = document.getElementById('targetState');
@@ -527,6 +569,9 @@
     let cameraDistance = 340;
     let cameraYaw = 0;
     let cameraPitch = 0;
+    let mobileSettingsCollapsed = false;
+
+    const mobileSettingsQuery = window.matchMedia('(max-width: 680px)');
 
     const raycaster = new THREE.Raycaster();
     const ndc = new THREE.Vector2();
@@ -585,6 +630,13 @@
     window.addEventListener('resize', resize);
     startCameraButton.addEventListener('click', startCamera);
     resetViewButton.addEventListener('click', resetView);
+    settingsToggle.addEventListener('click', () => setMobileSettingsCollapsed(false));
+    hideSettingsButton.addEventListener('click', () => setMobileSettingsCollapsed(true));
+    if (typeof mobileSettingsQuery.addEventListener === 'function') {
+      mobileSettingsQuery.addEventListener('change', () => {
+        syncMobileSettingsState({ collapseOnMobile: cameraRunning && mobileSettingsQuery.matches });
+      });
+    }
 
     graphEl.addEventListener('pointermove', (event) => {
       if (pointer.source !== 'hand') {
@@ -637,6 +689,7 @@
         cameraRunning = true;
         inputState.textContent = 'Camera overlay active';
         startCameraButton.textContent = 'Camera active';
+        syncMobileSettingsState({ collapseOnMobile: true });
       } catch (error) {
         inputState.textContent = 'Camera blocked, mouse fallback';
         startCameraButton.textContent = 'Camera unavailable';
@@ -644,6 +697,34 @@
       } finally {
         startCameraButton.disabled = false;
       }
+    }
+
+    function syncMobileSettingsState({ collapseOnMobile = false } = {}) {
+      const mobileCameraActive = cameraRunning && mobileSettingsQuery.matches;
+      document.body.classList.toggle('mobile-settings-ready', mobileCameraActive);
+      settingsToggle.hidden = !mobileCameraActive;
+
+      if (!mobileCameraActive) {
+        setMobileSettingsCollapsed(false);
+        return;
+      }
+
+      if (collapseOnMobile) {
+        setMobileSettingsCollapsed(true);
+      } else {
+        updateSettingsToggle();
+      }
+    }
+
+    function setMobileSettingsCollapsed(collapsed) {
+      mobileSettingsCollapsed = collapsed;
+      document.body.classList.toggle('mobile-settings-collapsed', collapsed);
+      updateSettingsToggle();
+    }
+
+    function updateSettingsToggle() {
+      settingsToggle.textContent = mobileSettingsCollapsed ? 'Show settings' : 'Hide settings';
+      settingsToggle.setAttribute('aria-expanded', String(!mobileSettingsCollapsed));
     }
 
     function onHandResults(results) {
