@@ -6,6 +6,8 @@ Live demo:
 
 https://teleclaudius.bles-software.com/spatial-gesture-graph
 
+**More to explore:** [20 full-screen UI concepts](https://www.bles-software.com/inspiration/ui-systems/?utm_source=bles-demo&utm_medium=github-minority-report&utm_campaign=demo-exit) from Bles Software, the team behind this repo. Free to browse and download, no sign-up.
+
 This repository intentionally contains only the technical demo source.
 
 ## What It Does
